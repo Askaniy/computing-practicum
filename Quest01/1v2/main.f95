@@ -4,37 +4,36 @@ program quest01_1v2
     use my_math
     implicit none
 
-    integer :: i, j, k, n
+    integer :: i, j, n
     real, allocatable :: a(:,:), b(:,:), c(:,:)
-    character(10) :: line
 
     open(1, file='data1.dat', status='old')
-    read(1,*) line
-    write(*,*) line ! сбоит на этом месте -- я ожидаю, что в result запишется # 3, а там только #
-    read(line(2:),*) n
-    allocate(a(n, n))
-    do i = 1,n
-        read(1,*) (a(i, j), j=1,n)
-    end do
+        read(1,'(2x, i5)') n
+        allocate(a(n, n))
+        do j = 1,n
+            read(1,*) (a(i, j), i=1,n)
+        end do
     close(1)
     call output("a=", a)
 
     open(2, file='data2.dat', status='old')
-    read(2,*) line
-    allocate(b(n, n))
-    do i = 1,n
-        read(2,*) (b(i, j), j=1,n)
-    end do
+        read(2,'(2x, i5)') n
+        allocate(b(n, n))
+        do j = 1,n
+            read(2,*) (b(i, j), i=1,n)
+        end do
     close(2)
     call output("b=", b)
 
-    !allocate(c(n, n))
-    !c = 0
+    !c = matmul(a, b) ! в моих координатах эта функция ломается
+    c = square_matrix_multuply(a, b)
+    call output("a*b=", c)
 
-    !forall (i=1:n, j=1:n, k=1:n)
-    !    c(i, j) = c(i, j) + a(k, j) * b(i, k)
-    !end forall
-    
-    !call output("a*b=", c)
+    open(3, file='result.dat')
+        write(3,*) '# '//str(n)
+        do j = 1,n
+            write(3,'('//str(n)//'e11.'//str(md)//')') (c(i, j), i=1,n)
+        end do
+    close(3)
 
 end program

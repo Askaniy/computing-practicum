@@ -16,7 +16,7 @@ $(name): $(obj)
 $(name).o: my_prec.mod my_io.mod my_math.mod
 
 result: $(name)
-		./$(name) > result.dat
+		./$(name)
 
 clear:
 		rm -f *.o *.mod $(name)
