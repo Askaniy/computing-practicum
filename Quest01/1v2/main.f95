@@ -26,7 +26,7 @@ program quest01_1v2
     call output("b=", b)
 
     !c = matmul(a, b) ! в моих координатах эта функция ломается
-    c = square_matrix_multuply(a, b)
+    c = square_matrix_multiply(a, b)
     call output("a*b=", c)
 
     open(3, file='result.dat')

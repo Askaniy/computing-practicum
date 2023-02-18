@@ -4,7 +4,7 @@ module my_math
     implicit none
     contains
 
-    function square_matrix_multuply(a, b) result(c)
+    function square_matrix_multiply(a, b) result(c)
         real, intent(in) :: a(:,:), b(:,:)
         real, allocatable :: c(:,:)
         integer :: i, j, k, n
