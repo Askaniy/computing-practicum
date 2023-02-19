@@ -17,6 +17,19 @@ module my_io
 
     contains
 
+    ! Серия функций, требуемых для вычислительного практикума
+    function import_tarakanov(path) result(array)
+        integer :: i, j, n
+        real(mp), allocatable :: array(:,:)
+        character(*) :: path
+        open(1, file=path, status='old')
+        read(1,'(2x, i5)') n
+        allocate(array(n, n))
+        do j = 1,n
+            read(1,*) (array(i, j), i=1,n)
+        end do
+        close(1)
+    end function
 
     ! Серия функций str. Принимает целые и вещественные переменные, возвращает строку
     ! Пример использования: s = str(2022)
