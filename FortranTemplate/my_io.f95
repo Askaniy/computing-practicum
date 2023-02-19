@@ -18,6 +18,32 @@ module my_io
     contains
 
 
+    ! Серия функций, требуемых для вычислительного практикума
+
+    function import_matrix(path, mode) result(array)
+        integer :: i, j, n
+        real(mp), allocatable :: array(:,:)
+        character(*) :: path, mode
+        open(1, file=path, status='old')
+            read(1,'(2x, i5)') n ! размер матрицы задаётся с третьего символа первой строки
+            if (mode == 'square') then
+                allocate(array(n, n))
+                do j = 1,n
+                    read(1,*) (array(i, j), i=1,n)
+                end do
+            elseif (mode == 'tridiagonal') then
+                allocate(array(3, n))
+                array = 0
+                read(1,*) (array(i, 1), i=2,3) ! первые два элемента со сдвигом
+                do j = 2,n-1
+                    read(1,*) (array(i, j), i=1,3)
+                end do
+                read(1,*) (array(i, n), i=1,2) ! последние два тоже
+            end if
+        close(1)
+    end function
+
+
     ! Серия функций str. Принимает целые и вещественные переменные, возвращает строку
     ! Пример использования: s = str(2022)
 
