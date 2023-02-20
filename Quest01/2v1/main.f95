@@ -5,7 +5,7 @@ program quest01_1v2
     implicit none
 
     integer :: i, j, m
-    real, allocatable :: a(:,:), b(:,:), c(:,:)
+    real(mp), allocatable :: a(:,:), b(:,:), c(:,:)
 
     a = import_matrix('data1.dat', 'tridiagonal')
     !call output('a=', a)
@@ -19,14 +19,14 @@ program quest01_1v2
     !call output("a*b=", c)
 
     open(1, file='result.dat')
-        write(1,*) '# '//str(m)
-        write(1,'(5e11.'//str(md)//')') (c(i, 1), i=3,5)
-        write(1,'(5e11.'//str(md)//')') (c(i, 2), i=2,5)
+        write(1,'("# ", i0)') m
+        write(1,'(5e10.'//str(md)//')') (c(i, 1), i=3,5)
+        write(1,'(5e10.'//str(md)//')') (c(i, 2), i=2,5)
         do j = 3,m-2
-            write(1,'(5e11.'//str(md)//')') (c(i, j), i=1,5)
+            write(1,'(5e10.'//str(md)//')') (c(i, j), i=1,5)
         end do
-        write(1,'(5e11.'//str(md)//')') (c(i, m-1), i=1,4)
-        write(1,'(5e11.'//str(md)//')') (c(i, m), i=1,3)
+        write(1,'(5e10.'//str(md)//')') (c(i, m-1), i=1,4)
+        write(1,'(5e10.'//str(md)//')') (c(i, m), i=1,3)
     close(1)
 
 end program
