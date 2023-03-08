@@ -1,5 +1,4 @@
 module my_math
-    use my_prec
     use my_io
     implicit none
     contains
@@ -12,9 +11,8 @@ module my_math
         m = size(a, dim=2)
         if (mode == 'square') then
             allocate(c(m, m))
-            c = 0
-            forall (i=1:m, j=1:m, k=1:m)
-                c(i, j) = c(i, j) + a(k, j) * b(i, k)
+            forall (i=1:m, j=1:m)
+                c(i, j) = dot_product(a(:,j), b(i,:))
             end forall
         elseif (mode == 'tridiagonal') then
             allocate(c(5, m))

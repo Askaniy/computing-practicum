@@ -1,6 +1,8 @@
 module my_io
-    use my_prec ! Во всех процедурах для int всегда 4 байта, для real всегда mp
     implicit none
+
+    integer, parameter :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
+    integer, parameter :: dp = 3 ! "decimal places", число знаков после запятой в форматированном выводе
     
     interface str
         module procedure str_int, str_real
@@ -72,8 +74,8 @@ module my_io
     
     pure function str_real(r) result(s)
         real(mp), intent(in) :: r
-        character(str_real_len(r, '(f0.'//str_int(md)//')')) :: s
-        write(s,'(f0.'//str_int(md)//')') r
+        character(str_real_len(r, '(f0.'//str_int(dp)//')')) :: s
+        write(s,'(f0.'//str_int(dp)//')') r
     end function
 
 
@@ -290,7 +292,7 @@ module my_io
 
     ! Серия подпрограмм output. Реализует печать 1D/2D массивов и целыми и вещественными элементами
     ! Не требует форматирования - использует информацию в массиве для определения размера
-    !                                               и переменную md для количества знаков после запятой
+    !                                               и переменную dp для количества знаков после запятой
     ! Отступ, соразмерный тексту, корректно работает только для латиницы
     ! Пример использования: call output("array = ", a)
 
@@ -321,7 +323,7 @@ module my_io
     subroutine output_real1D(text, a)
         character(*), intent(in) :: text
         real(mp), intent(in) :: a(:)
-        write(*,'("'//text//'", (1x, f0.'//str(md)//')$)') a
+        write(*,'("'//text//'", (1x, f0.'//str(dp)//')$)') a
         write(*,*)
     end subroutine
 
@@ -337,9 +339,9 @@ module my_io
                 if (l < len(str(int(a(i,j))))) l = len(str(int(a(i,j))))
             end do
         end do
-        l = l + 2 + md
-        write(*,'("'//text//'", '//str(sz_x)//'f'//str(l)//'.'//str(md)//'/,&
-        &('//str(len(text))//'x, '//str(sz_x)//'f'//str(l)//'.'//str(md)//'))') a
+        l = l + 2 + dp
+        write(*,'("'//text//'", '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'/,&
+        &('//str(len(text))//'x, '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'))') a
     end subroutine
 
 
