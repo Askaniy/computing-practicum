@@ -2,10 +2,38 @@ module my_math
     use my_io !use, intrinsic :: ieee_arithmetic
     implicit none
 
-    integer, private :: i, j!, k
+    integer, private :: i, j, k
 
     contains
 
+    ! Возвращает интерполированный массив из сеточной функции и числа разбиений
+    ! Представление в виде двух колонок, x и f(x). Иксы отмасштабированы до [-1, 1]
+    function polynomial_interp(grid, q) result(interpolated)
+        integer, intent(in) :: q
+        integer :: n, m
+        real(mp), intent(in) :: grid(:,:)
+        real(mp) :: interpolated(2, (size(grid, dim=2)-1)*q+1)
+        real(mp) :: lagrange_basis, numerator, denominator
+        
+        n = size(grid, dim=2)
+        m = size(interpolated, dim=2)
+        do i = 1,m
+            interpolated(1, i) = -1.0_mp + 2.0_mp*(i-1.0_mp) / (m-1.0_mp)
+            interpolated(2, i) = 0.0_mp
+            do j = 1,n
+                numerator = 1.0_mp
+                denominator = 1.0_mp
+                do k = 1,n
+                    if (k /= j) then
+                        numerator = numerator * (interpolated(1, i) - grid(1, k))
+                        denominator = denominator * (grid(1, j) - grid(1, k))
+                    end if
+                end do
+                lagrange_basis = numerator / denominator
+                interpolated(2, i) = interpolated(2, i) + lagrange_basis * grid(2, j)
+            end do
+        end do
+    end function
     
     function integrate(f, a, b, n, mode) result(s)
         integer :: n, m

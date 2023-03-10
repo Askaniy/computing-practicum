@@ -45,7 +45,7 @@ module my_io
             elseif (mode == 'chebyshev') then
                 do k = 0,n
                     read(1,*) array(2, k+1)
-                    array(1, k+1) = cos( (2*k + 1) / (2*n + 2) * PI)
+                    array(1, k+1) = cos((2*k + 1) / (2*n + 2) * PI)
                 end do
             end if
         close(1)
