@@ -17,20 +17,20 @@ module my_math
         
         n = size(grid, dim=2)
         m = size(interpolated, dim=2)
-        do i = 1,m
-            interpolated(1, i) = -1.0_mp + 2.0_mp*(i-1.0_mp) / (m-1.0_mp)
-            interpolated(2, i) = 0.0_mp
-            do j = 1,n
+        do j = 1,m
+            interpolated(1, j) = -1.0_mp + 2.0_mp*(j-1.0_mp) / (m-1.0_mp)
+            interpolated(2, j) = 0.0_mp
+            do k = 1,n
                 numerator = 1.0_mp
                 denominator = 1.0_mp
-                do k = 1,n
-                    if (k /= j) then
-                        numerator = numerator * (interpolated(1, i) - grid(1, k))
-                        denominator = denominator * (grid(1, j) - grid(1, k))
+                do i = 1,n
+                    if (i /= k) then
+                        numerator = numerator * (interpolated(1, j) - grid(1, i))
+                        denominator = denominator * (grid(1, k) - grid(1, i))
                     end if
                 end do
                 lagrange_basis = numerator / denominator
-                interpolated(2, i) = interpolated(2, i) + lagrange_basis * grid(2, j)
+                interpolated(2, j) = interpolated(2, j) + grid(2, k) * lagrange_basis
             end do
         end do
     end function

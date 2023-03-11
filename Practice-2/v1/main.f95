@@ -15,11 +15,11 @@ program quest2v1
     call output('grid = ', grid)
 
     n = size(grid, dim=2) - 1
-    q = 5 ! шаг интерполяции
+    q = 2 ! шаг интерполяции
     
     interpolated = polynomial_interp(grid, q)
     m = size(interpolated, dim=2) - 1 ! q*n число интервалов интерполированной функции
-    call output('interpolated = ', interpolated)
+    !call output('interpolated = ', interpolated)
 
     call unscale_grid(interpolated, a, b)
     call output('interpolated = ', interpolated)

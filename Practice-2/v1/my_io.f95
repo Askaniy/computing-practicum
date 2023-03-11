@@ -27,7 +27,7 @@ module my_io
 
     ! Серия функций, потребовавшихся для вычислительного практикума
 
-    ! читает файл, заполняет колонку значений, границы аргументов и считает отмасштабированные значения
+    ! Читает файл, заполняет колонку значений, границы аргументов и считает отмасштабированные значения
     subroutine import_grid(path, array, a, b, mode)
         integer :: k, n
         real(mp) :: a, b
@@ -40,18 +40,18 @@ module my_io
             if (mode == 'uniform') then
                 do k = 0,n
                     read(1,*) array(2, k+1)
-                    array(1, k+1) = 2*k/n - 1
+                    array(1, k+1) = 2.0_mp*k/n - 1
                 end do
             elseif (mode == 'chebyshev') then
                 do k = 0,n
                     read(1,*) array(2, k+1)
-                    array(1, k+1) = cos((2*k + 1) / (2*n + 2) * PI)
+                    array(1, k+1) = cos((2.0_mp*k + 1) / (2.0_mp*n + 2) * PI)
                 end do
             end if
         close(1)
     end subroutine
 
-    ! растягивает отмасштабированную до [-1, 1] колонку аргументов на [a, b]
+    ! Растягивает отмасштабированную до [-1, 1] колонку аргументов на [a, b]
     subroutine unscale_grid(array, a, b)
         integer :: k, n
         real(mp) :: a, b, array(:,:)
