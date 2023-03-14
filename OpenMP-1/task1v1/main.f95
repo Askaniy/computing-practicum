@@ -25,7 +25,7 @@ program openmp1_1v1
     n = 100
 
     !$omp parallel 
-      numt=omp_get_num_threads()
+        numt=omp_get_num_threads()
     !$omp end parallel 
 
     h = (b - a) / numt
