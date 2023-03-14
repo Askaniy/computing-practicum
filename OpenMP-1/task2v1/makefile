@@ -1,3 +1,4 @@
+module_name := fortran.cpython-310-x86_64-linux-gnu.so
 debug_options := -fcheck=all
 optim_options := -Ofast
 opt := -ffree-line-length-none -fopenmp
@@ -8,8 +9,10 @@ fast: result
 debug: opt += $(debug_options)
 debug: result
 
-result:
+$(module_name):
 		f2py -c fortran.f95 -m fortran --f90flags='$(opt)' -lgomp
+
+result: $(module_name)
 		python3 main.py
 
 clear:
