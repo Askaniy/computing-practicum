@@ -1,7 +1,7 @@
 program quest2v1
     use my_io
     use my_math
-    implicit none    ! maxima генерация
+    implicit none
 
     integer :: i, j, n, m, q
     real(mp) :: a, b

@@ -2,7 +2,7 @@ name := main
 comp := gfortran
 debug_options := -fcheck=all
 optim_options := -Ofast
-opt := -c -ffree-line-length-none
+opt := -c -ffree-line-length-none -fopenmp
 ext := f95
 
 files := $(wildcard *.$(ext))
@@ -15,7 +15,7 @@ debug: opt += $(debug_options)
 debug: result
 
 $(name): $(obj)
-		$(comp) $^ -o $@
+		$(comp) -fopenmp $^ -o $@
 
 %.o %.mod: %.$(ext)
 		$(comp) $(opt) $<
