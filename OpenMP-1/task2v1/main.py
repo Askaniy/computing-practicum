@@ -3,6 +3,8 @@ import numpy as np
 import pygame
 import time
 
+testing = True
+
 def next_frame(matrix):
     new_matrix = np.zeros_like(matrix)
     rows, cols = matrix.shape
@@ -22,11 +24,13 @@ def next_frame(matrix):
 
 # Инициализация Pygame
 pygame.init()
-WINDOW_SIZE = (600, 400)
+WINDOW_SIZE = (1080, 720)
 WHITE = (197, 197, 197)
 BLACK = (30, 30, 30)
-CELL_SIZE = 2
-screen = pygame.display.set_mode(WINDOW_SIZE)
+CELL_SIZE = 4
+MATRIX_SIZE = (int(WINDOW_SIZE[0]/CELL_SIZE), int(WINDOW_SIZE[1]/CELL_SIZE))
+if not testing:
+    screen = pygame.display.set_mode(WINDOW_SIZE)
 
 # Вывод поля на экран
 def print_matrix(matrix):
@@ -41,31 +45,31 @@ def print_matrix(matrix):
                 pygame.draw.rect(screen, BLACK, rect, 1)
     pygame.display.flip()
 
-# Создаем начальную матрицу
 
-# Запускаем игру
+if not testing:
+    # Запускаем игру
+    matrix = np.random.randint(2, size=MATRIX_SIZE)
+    running = True
+    while running:
+        print_matrix(matrix)
+        #time.sleep(0.1)
+        matrix = f.game_of_life.next_frame(matrix)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+else:
+    matrix = np.random.randint(2, size=MATRIX_SIZE)
+    start = time.time()
+    for i in range(100):
+        matrix = next_frame(matrix)
+    time1 = time.time()-start
+    print(f'Python: {time1} s')
 
-    #for event in pygame.event.get():
-    #    if event.type == pygame.QUIT:
-    #        running = False
-#running = True
+    matrix = np.random.randint(2, size=MATRIX_SIZE)
+    start = time.time()
+    for i in range(100):
+        matrix = f.game_of_life.next_frame(matrix)
+    time2 = time.time()-start
+    print(f'Fortran: {time2} s')
 
-matrix = np.random.randint(2, size=(int(WINDOW_SIZE[0]/CELL_SIZE), int(WINDOW_SIZE[1]/CELL_SIZE)))
-n = 0
-start = time.time()
-while n < 10:
-    n += 1
-    print_matrix(matrix)
-    #time.sleep(0.1)
-    matrix = f.game_of_life.next_frame(matrix)
-print(f'Фортран: {time.time()-start} сек')
-
-matrix = np.random.randint(2, size=(int(WINDOW_SIZE[0]/CELL_SIZE), int(WINDOW_SIZE[1]/CELL_SIZE)))
-n = 0
-start = time.time()
-while n < 10:
-    n += 1
-    print_matrix(matrix)
-    #time.sleep(0.1)
-    matrix = next_frame(matrix)
-print(f'Питон: {time.time()-start} сек')
+    print(f'ratio = {time1 / time2}')
