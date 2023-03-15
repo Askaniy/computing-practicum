@@ -9,7 +9,7 @@ fast: result
 debug: opt += $(debug_options)
 debug: result
 
-$(module_name):
+$(module_name): fortran.f95
 		f2py -c fortran.f95 -m fortran --f90flags='$(opt)' -lgomp
 
 result: $(module_name)

@@ -3,7 +3,7 @@ import numpy as np
 import pygame
 import time
 
-testing = True
+testing = False
 
 def next_frame(matrix):
     new_matrix = np.zeros_like(matrix)
@@ -24,7 +24,7 @@ def next_frame(matrix):
 
 # Инициализация Pygame
 pygame.init()
-WINDOW_SIZE = (1080, 720)
+WINDOW_SIZE = (1200, 720)
 WHITE = (197, 197, 197)
 BLACK = (30, 30, 30)
 CELL_SIZE = 4
