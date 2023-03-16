@@ -48,16 +48,18 @@ module game_of_life
         temp_matrix(1:cols, 0) = matrix(:, rows)
         ! обновляем на её основе исходную матрицу
         matrix = 0
-        do i = 1,cols
+        !$omp parallel do collapse(1) schedule(guided)
             do j = 1,rows
-                count = sum(temp_matrix(i-1:i+1, j-1:j+1)) - temp_matrix(i, j)
-                if (count == 3) then
-                    matrix(i, j) = 1
-                else if (temp_matrix(i, j) == 1 .and. count == 2) then
-                    matrix(i, j) = 1
-                end if
+                do i = 1,cols
+                    count = sum(temp_matrix(i-1:i+1, j-1:j+1)) - temp_matrix(i, j)
+                    if (count == 3) then
+                        matrix(i, j) = 1
+                    else if (temp_matrix(i, j) == 1 .and. count == 2) then
+                        matrix(i, j) = 1
+                    end if
+                end do
             end do
-        end do
+            !$omp end parallel do
     end subroutine
 
 end module

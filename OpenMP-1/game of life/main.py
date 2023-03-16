@@ -1,5 +1,7 @@
 import fortran as f
 import numpy as np
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame
 import time
 
@@ -80,33 +82,34 @@ if not testing:
             if event.type == pygame.QUIT:
                 running = False
 else:
-    matrix = np.random.randint(2, size=MATRIX_SIZE)
-    start = time.time()
-    for i in range(100):
-        matrix = next_frame(matrix)
-    time1 = time.time()-start
-    print(f'Python 1: {time1} s')
+    #matrix = np.random.randint(2, size=MATRIX_SIZE)
+    #start = time.time()
+    #for i in range(100):
+    #    matrix = next_frame(matrix)
+    #time1 = time.time()-start
+    #print(f'Python 1: {time1} s')
+
+    #matrix = np.random.randint(2, size=MATRIX_SIZE, dtype='i1')
+    #start = time.time()
+    #for i in range(100):
+    #    matrix = next_frame2(matrix)
+    #time2 = time.time()-start
+    #print(f'Python 2: {time2} s')
 
     matrix = np.random.randint(2, size=MATRIX_SIZE)
     start = time.time()
-    for i in range(100):
+    for i in range(100000):
         matrix = f.game_of_life.next_frame(matrix)
     time3 = time.time()-start
     print(f'Fortran 1: {time3} s')
 
     matrix = np.random.randint(2, size=MATRIX_SIZE, dtype='i1')
     start = time.time()
-    for i in range(100):
-        matrix = next_frame2(matrix)
-    time2 = time.time()-start
-    print(f'Python 2: {time2} s')
-
-    matrix = np.random.randint(2, size=MATRIX_SIZE, dtype='i1')
-    start = time.time()
-    for i in range(100):
+    for i in range(100000):
         matrix = f.game_of_life.next_frame2(matrix)
     time4 = time.time()-start
     print(f'Fortran 2: {time4} s')
 
-    print(f'ratio P1/F1 = {time1 / time3}')
-    print(f'ratio P2/F2 = {time2 / time4}')
+    #print(f'ratio P1/F1 = {time1 / time3}')
+    #print(f'ratio P2/F2 = {time2 / time4}')
+    print(f'ratio F1/F2 = {time3 / time4}')
