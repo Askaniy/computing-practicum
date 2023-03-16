@@ -21,6 +21,28 @@ def next_frame(matrix):
                     new_matrix[i, j] = 1
     return new_matrix
 
+def next_frame2(matrix):
+    rows, cols = matrix.shape
+    temp_matrix = np.zeros((rows+2, cols+2), int)
+    temp_matrix[1:rows+1, 1:cols+1] = matrix
+    temp_matrix[0, 0] = matrix[-1, -1]
+    temp_matrix[0, 1:cols+1] = matrix[-1, :]
+    temp_matrix[0, -1] = matrix[-1, 0]
+    temp_matrix[1:rows+1, -1] = matrix[:, 0]
+    temp_matrix[-1, -1] = matrix[0, 0]
+    temp_matrix[-1, 1:cols+1] = matrix[0, :]
+    temp_matrix[-1, 0] = matrix[0, -1]
+    temp_matrix[1:rows+1, 0] = matrix[:, -1]
+    matrix = np.zeros_like(matrix)
+    for i in range(1,rows+1):
+        for j in range(1,cols+1):
+            count = np.sum(temp_matrix[i-1:i+2, j-1:j+2]) - temp_matrix[i, j]
+            if count == 3:
+                matrix[i-1, j-1] = 1
+            elif count == 2 and temp_matrix[i, j] == 1:
+                matrix[i-1, j-1] = 1
+    return matrix
+
 
 # Инициализация Pygame
 pygame.init()
@@ -48,12 +70,12 @@ def print_matrix(matrix):
 
 if not testing:
     # Запускаем игру
-    matrix = np.random.randint(2, size=MATRIX_SIZE)
+    matrix = np.random.randint(2, size=MATRIX_SIZE, dtype='i1')
     running = True
     while running:
         print_matrix(matrix)
         #time.sleep(0.1)
-        matrix = f.game_of_life.next_frame(matrix)
+        matrix = f.game_of_life.next_frame2(matrix)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -63,13 +85,28 @@ else:
     for i in range(100):
         matrix = next_frame(matrix)
     time1 = time.time()-start
-    print(f'Python: {time1} s')
+    print(f'Python 1: {time1} s')
 
     matrix = np.random.randint(2, size=MATRIX_SIZE)
     start = time.time()
     for i in range(100):
         matrix = f.game_of_life.next_frame(matrix)
-    time2 = time.time()-start
-    print(f'Fortran: {time2} s')
+    time3 = time.time()-start
+    print(f'Fortran 1: {time3} s')
 
-    print(f'ratio = {time1 / time2}')
+    matrix = np.random.randint(2, size=MATRIX_SIZE, dtype='i1')
+    start = time.time()
+    for i in range(100):
+        matrix = next_frame2(matrix)
+    time2 = time.time()-start
+    print(f'Python 2: {time2} s')
+
+    matrix = np.random.randint(2, size=MATRIX_SIZE, dtype='i1')
+    start = time.time()
+    for i in range(100):
+        matrix = f.game_of_life.next_frame2(matrix)
+    time4 = time.time()-start
+    print(f'Fortran 2: {time4} s')
+
+    print(f'ratio P1/F1 = {time1 / time3}')
+    print(f'ratio P2/F2 = {time2 / time4}')

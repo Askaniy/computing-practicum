@@ -25,14 +25,39 @@ module game_of_life
                         else
                             new_matrix(i, j) = 1
                         end if
-                    else
-                        if (count == 3) then
-                            new_matrix(i, j) = 1
-                        end if
                     end if
                 end do
             end do
         !$omp end parallel
+    end subroutine
+
+    subroutine next_frame2(matrix, cols, rows)
+        integer :: i, j, count, cols, rows
+        integer(1), intent(in out) :: matrix(cols, rows)
+        !f2py intent(in,out) :: matrix
+        integer(1) :: temp_matrix(0:cols+1, 0:rows+1)
+        ! создаём расширенную копию исходной матрицы
+        temp_matrix(1:cols, 1:rows) = matrix
+        temp_matrix(0, 0) = matrix(cols, rows)
+        temp_matrix(0, 1:rows) = matrix(cols, :)
+        temp_matrix(0, rows+1) = matrix(cols, 1)
+        temp_matrix(1:cols, rows+1) = matrix(:, 1)
+        temp_matrix(cols+1, rows+1) = matrix(1, 1)
+        temp_matrix(cols+1, 1:rows) = matrix(1, :)
+        temp_matrix(cols+1, 0) = matrix(1, rows)
+        temp_matrix(1:cols, 0) = matrix(:, rows)
+        ! обновляем на её основе исходную матрицу
+        matrix = 0
+        do i = 1,cols
+            do j = 1,rows
+                count = sum(temp_matrix(i-1:i+1, j-1:j+1)) - temp_matrix(i, j)
+                if (count == 3) then
+                    matrix(i, j) = 1
+                else if (temp_matrix(i, j) == 1 .and. count == 2) then
+                    matrix(i, j) = 1
+                end if
+            end do
+        end do
     end subroutine
 
 end module
