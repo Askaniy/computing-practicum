@@ -22,12 +22,12 @@ program quest2v1
     !call output('interpolated = ', interpolated)
 
     call unscale_grid(interpolated, a, b)
-    call output('interpolated = ', interpolated)
+    !call output('interpolated = ', interpolated)
 
     open(1, file='res_'//trim(mode)//'.dat')
         write(1,'("# ", i0)') m
         do j = 1,m+1
-            write(1,'(2e10.'//str(dp)//')') interpolated(:, j)
+            write(1,'(2e11.'//str(dp)//')') interpolated(:, j)
         end do
     close(1)
 

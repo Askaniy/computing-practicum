@@ -14,15 +14,15 @@
 
 
 \title{Задание №2\\
-		Интерполяция функций полиномами}
+		Интерполяция функций полин омами}
 \author{Анпилогов Асканий, 21.С03-мм}
 %\date{1 марта 2023 г.}
 
 \begin{document}
 	\maketitle
-	%\tableofcontents
+	\tableofcontents
 
-\section*{Цель}
+	\section{Цель}
 	\begin{itemize}
 		\item Исследовать работу программы на функциях:
 			\begin{enumerate}
@@ -32,12 +32,28 @@
 		\item Выяснить, что будет происходить при росте числа интервалов интерполяции в случае использования равномерных и чебышевских сеток.
 	\end{itemize}
 
-\section*{Описание работы}
+	\section{Тестовая функция}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=16cm, height=9cm,
+				grid=major, legend pos=south east,
+				xlabel={$x$}, ylabel={$f(x)$}
+			]
+			\addplot table{res_test.dat};
+			%\legend{$x = \overline{-6, 6}, \, y = 7, 3, 12, 4, 9, 1$};
+		\end{axis}
+	\end{tikzpicture}
 
-	\begin{tikzpicture}[scale=2]
-		\begin{axis}[grid=major,legend pos=north west,
-			xlabel={x},ylabel={$f(x)$}]
-			\addplot table{v1/res_uniform.dat};
+	\section{$f(x) = \frac{1}{1+x^2}$}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=16cm, height=9cm,
+				grid=major, legend pos=south east,
+				xlabel={$x$}, ylabel={$f(x)$}
+			]
+			\addplot table{res_uniform.dat};
+			\addplot{1/(1+x*x)};
+			%\legend{$x = \overline{-6, 6}, \, y = 7, 3, 12, 4, 9, 1$};
 		\end{axis}
 	\end{tikzpicture}
 

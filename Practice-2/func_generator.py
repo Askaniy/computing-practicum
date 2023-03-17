@@ -1,7 +1,12 @@
 import numpy as np
 
 def f(x):
-    return 1+x**2
+    return 1/(1+x*x)
 
-for i in np.arange(-6, 7, 1):
+a = -6
+b = 6
+lst = np.arange(a, b+1, 1.5)
+print(f'# {len(lst)-1}')
+print(f'{a} {b}')
+for i in lst:
     print(round(f(i), 5))
