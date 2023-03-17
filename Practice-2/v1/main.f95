@@ -15,7 +15,7 @@ program quest2v1
     call output('grid = ', grid)
 
     n = size(grid, dim=2) - 1
-    q = 2 ! шаг интерполяции
+    q = 5 ! шаг интерполяции
     
     interpolated = polynomial_interp(grid, q)
     m = size(interpolated, dim=2) - 1 ! q*n число интервалов интерполированной функции

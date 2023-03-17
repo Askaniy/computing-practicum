@@ -1,0 +1,44 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage[russian]{babel}
+\usepackage[width=18cm, top=2cm, bottom=2cm]{geometry}
+\usepackage{indentfirst}
+\usepackage{enumerate}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{pgf}
+\usepackage{pgfplotstable}
+
+
+\title{Задание №2\\
+		Интерполяция функций полиномами}
+\author{Анпилогов Асканий, 21.С03-мм}
+%\date{1 марта 2023 г.}
+
+\begin{document}
+	\maketitle
+	%\tableofcontents
+
+\section*{Цель}
+	\begin{itemize}
+		\item Исследовать работу программы на функциях:
+			\begin{enumerate}
+				\item $f(x) = \frac{1}{1+x^2}$
+				\item $f(x) = C_1, \, x_i = C_2$
+			\end{enumerate}
+		\item Выяснить, что будет происходить при росте числа интервалов интерполяции в случае использования равномерных и чебышевских сеток.
+	\end{itemize}
+
+\section*{Описание работы}
+
+	\begin{tikzpicture}[scale=2]
+		\begin{axis}[grid=major,legend pos=north west,
+			xlabel={x},ylabel={$f(x)$}]
+			\addplot table{v1/res_uniform.dat};
+		\end{axis}
+	\end{tikzpicture}
+
+\end{document}
