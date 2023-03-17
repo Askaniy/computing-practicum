@@ -5,7 +5,7 @@ def f(x):
 
 a = -6
 b = 6
-lst = np.arange(a, b+1, 1.5)
+lst = np.arange(a, b+1, 0.2)
 print(f'# {len(lst)-1}')
 print(f'{a} {b}')
 for i in lst:
