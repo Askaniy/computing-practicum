@@ -14,7 +14,7 @@
 
 
 \title{Задание №2\\
-		Интерполяция функций полин омами}
+		Интерполяция функций полиномами}
 \author{Анпилогов Асканий,  21.С03-мм}
 %\date{1 марта 2023 г.}
 
@@ -32,7 +32,9 @@
 		\item Выяснить, что будет происходить при росте числа интервалов интерполяции в случае использования равномерных и чебышевских сеток.
 	\end{itemize}
 
-	\section{Тестовая функция}
+	\section{Графики}
+
+	\subsection{Тестовая функция}
 	\begin{tikzpicture}
 		\begin{axis}[
 				width=16cm, height=7cm,
@@ -44,10 +46,10 @@
 		\end{axis}
 	\end{tikzpicture}
 
-	\section{$f(x) = \frac{1}{1+x^2}$}
+	\subsection{$f(x) = \frac{1}{1+x^2}$}
 	\begin{tikzpicture}
 		\begin{axis}[
-				width=16cm, height=9cm,
+				width=16cm, height=7cm,
 				grid=major, legend pos=south east,
 				xlabel={$x$}, ylabel={$f(x)$}
 			]
@@ -57,14 +59,42 @@
 		\end{axis}
 	\end{tikzpicture}
 
-	\section{$f(x) = C_1, \, x_i = C_2$}
+	\subsection{$f(x) = C_1, \, x_i = C_2$}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=16cm, height=7cm,
+				grid=major, legend pos=south east,
+				xlabel={$x$}, ylabel={$f(x)$}
+			]
+			\addplot table{res_uniform2.dat};
+			\addplot[color=red,domain=-10:10,samples=100]{1};
+			%\legend{$x = \overline{-6, 6}, \, y = 7, 3, 12, 4, 9, 1$};
+		\end{axis}
+	\end{tikzpicture}
+
+	\section{Исправление ошибок}
+
+	\subsection{uniform}
 	\begin{tikzpicture}
 		\begin{axis}[
 				width=16cm, height=9cm,
 				grid=major, legend pos=south east,
 				xlabel={$x$}, ylabel={$f(x)$}
 			]
-			\addplot table{res_uniform2.dat};
+			\addplot[color=blue] table{v1/res_uniform.dat};
+			\addplot[color=red,domain=-10:10,samples=100]{1};
+			%\legend{$x = \overline{-6, 6}, \, y = 7, 3, 12, 4, 9, 1$};
+		\end{axis}
+	\end{tikzpicture}
+
+	\subsection{chebyshev}
+	\begin{tikzpicture}
+		\begin{axis}[
+				width=16cm, height=9cm,
+				grid=major, legend pos=south east,
+				xlabel={$x$}, ylabel={$f(x)$}
+			]
+			\addplot[color=blue] table{v1/res_chebyshev.dat};
 			\addplot[color=red,domain=-10:10,samples=100]{1};
 			%\legend{$x = \overline{-6, 6}, \, y = 7, 3, 12, 4, 9, 1$};
 		\end{axis}

@@ -3,7 +3,7 @@ program quest2v1
     use my_math
     implicit none
 
-    integer :: i, j, n, m, q
+    integer :: j, n, m, q
     real(mp) :: a, b
     real(mp), allocatable :: grid(:,:), interpolated(:,:)
     character(10) :: mode
@@ -15,7 +15,7 @@ program quest2v1
     call output('grid = ', grid)
 
     n = size(grid, dim=2) - 1
-    q = 5 ! шаг интерполяции
+    q = 50 ! шаг интерполяции
     
     interpolated = polynomial_interp(grid, q)
     m = size(interpolated, dim=2) - 1 ! q*n число интервалов интерполированной функции
