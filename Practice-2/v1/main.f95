@@ -3,7 +3,8 @@ program quest2v1
     use my_math
     implicit none
 
-    integer :: j, n, m, q
+    integer :: j, n, m
+    integer, parameter :: q = 50 ! шаг интерполяции
     real(mp) :: a, b
     real(mp), allocatable :: grid(:,:), interpolated(:,:)
     character(10) :: mode
@@ -14,15 +15,13 @@ program quest2v1
     call import_grid(trim(mode)//'.dat', grid, a, b, trim(mode))
     call output('grid = ', grid)
 
-    n = size(grid, dim=2) - 1
-    q = 50 ! шаг интерполяции
-    
-    interpolated = polynomial_interp(grid, q)
-    m = size(interpolated, dim=2) - 1 ! q*n число интервалов интерполированной функции
-    !call output('interpolated = ', interpolated)
+    n = size(grid, dim=2) - 1 ! число интервалов сетки
 
     ! Растягивает отмасштабированную до [-1, 1] колонку аргументов на [a, b]
-    interpolated(1, :) = (a + b + (b-a)*interpolated(1, :)) / 2.0_mp
+    grid(1, :) = (a + b + (b-a)*grid(1, :)) / 2.0_mp
+    
+    interpolated = polynomial_interp(grid, q, a, b)
+    m = size(interpolated, dim=2) - 1 ! m=q*n, число интервалов интерполированной функции
 
     open(1, file='res_'//trim(mode)//'.dat')
         write(1,'("# ", i0)') m
