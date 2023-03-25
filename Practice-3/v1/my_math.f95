@@ -6,33 +6,31 @@ module my_math
 
     contains
 
-    ! Возвращает интерполированный массив из сеточной функции и числа разбиений
-    ! Представление в виде двух колонок, x и f(x). Иксы отмасштабированы до [-1, 1]
-    function polynomial_interp(grid, q) result(interpolated)
-        integer, intent(in) :: q
+    function solve_sle(a, b, mode) result(x)
+        real(mp), intent(in) :: a(:,:), b(:)
+        real(mp) :: x(size(b))
+        integer :: n
+        character(*), optional :: mode
+        if (.not. present(mode)) then
+            mode = 'gaussian'
+        end if
+        n = size(x) ! размер системы СЛУ
+        x = b
+    end function
+
+    function polynomial_interp(grid, q, a, b) result(interpolated)
+        integer, intent(in) :: q ! число разбиений интервала
         integer :: n, m
-        real(mp), intent(in) :: grid(:,:)
-        real(mp) :: interpolated(2, (size(grid, dim=2)-1)*q+1)
-        real(mp) :: lagrange_basis, numerator, denominator
-        
-        n = size(grid, dim=2)
-        m = size(interpolated, dim=2)
-        do i = 1,m
-            interpolated(1, i) = -1.0_mp + 2.0_mp*(i-1.0_mp) / (m-1.0_mp)
-            interpolated(2, i) = 0.0_mp
-            do j = 1,n
-                numerator = 1.0_mp
-                denominator = 1.0_mp
-                do k = 1,n
-                    if (k /= j) then
-                        numerator = numerator * (interpolated(1, i) - grid(1, k))
-                        denominator = denominator * (grid(1, j) - grid(1, k))
-                    end if
-                end do
-                lagrange_basis = numerator / denominator
-                interpolated(2, i) = interpolated(2, i) + lagrange_basis * grid(2, j)
-            end do
-        end do
+        real(mp), intent(in) :: grid(:, 0:), a, b ! начальная сетка в виде колонок x, f(x)
+        real(mp) :: interpolated(2, 0:(size(grid, dim=2)-1)*q) ! результат в том же виде
+        n = size(grid, dim=2) - 1
+        m = size(interpolated, dim=2) - 1 ! число интервалов
+        interpolated(1,:) = [(a + j*(b-a)/m, j=0,m)]
+        interpolated(2,:) = [(dot_product( & ! интерполяционный полином
+                                grid(2,:), [(product( & ! интерполяционный базис
+                                    (interpolated(1,j) - grid(1,:)) / (grid(1,k) - grid(1,:)), &
+                                    mask = grid(1,k)/=grid(1,:)), k=0,n)]), &
+                            j=0,m)]
     end function
     
     function integrate(f, a, b, n, mode) result(s)
