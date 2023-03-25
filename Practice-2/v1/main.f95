@@ -21,8 +21,8 @@ program quest2v1
     m = size(interpolated, dim=2) - 1 ! q*n число интервалов интерполированной функции
     !call output('interpolated = ', interpolated)
 
-    call unscale_grid(interpolated, a, b)
-    !call output('interpolated = ', interpolated)
+    ! Растягивает отмасштабированную до [-1, 1] колонку аргументов на [a, b]
+    interpolated(1, :) = (a + b + (b-a)*interpolated(1, :)) / 2.0_mp
 
     open(1, file='res_'//trim(mode)//'.dat')
         write(1,'("# ", i0)') m

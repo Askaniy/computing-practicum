@@ -35,30 +35,14 @@ module my_io
         character(*) :: path, mode
         open(1, file=path, status='old')
             read(1,'(2x, i5)') n
-            allocate(array(2, n+1)) ! точек на одну больше, чем интервалов
-            read(1,*) a, b
+            allocate(array(2, 0:n)) ! точек на одну больше, чем интервалов
+            read(1,*) a, b, array(2, :) ! чтение границ и столбца игреков (второго)
             if (mode == 'uniform') then
-                do k = 0,n
-                    read(1,*) array(2, k+1)
-                    array(1, k+1) = 2.0_mp*k/n - 1
-                end do
+                array(1, :) = [(2.0_mp*k/n - 1, k=0,n)] ! вычисление столбца иксов (первого)
             elseif (mode == 'chebyshev') then
-                do k = 0,n
-                    read(1,*) array(2, k+1)
-                    array(1, n-k+1) = cos((2.0_mp*k + 1) / (2.0_mp*n + 2) * PI)
-                end do
+                array(1, :) = [(cos((2.0_mp*k + 1) / (2.0_mp*n + 2) * PI), k=n,0,-1)]
             end if
         close(1)
-    end subroutine
-
-    ! Растягивает отмасштабированную до [-1, 1] колонку аргументов на [a, b]
-    subroutine unscale_grid(array, a, b)
-        integer :: k, n
-        real(mp) :: a, b, array(:,:)
-        n = size(array, dim=2)
-        do k = 1,n
-            array(1, k) = a + ((b - a) * (array(1, k)+1) / 2)
-        end do
     end subroutine
 
     function import_matrix(path, mode) result(array)
