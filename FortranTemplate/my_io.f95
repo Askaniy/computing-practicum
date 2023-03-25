@@ -2,7 +2,7 @@ module my_io
     implicit none
 
     integer, parameter :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
-    integer, parameter :: dp = 3 ! "decimal places", число знаков после запятой в форматированном выводе
+    integer, parameter :: dp = 5 ! "decimal places", число знаков после запятой в форматированном выводе
 
     integer, parameter, private :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter, private :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
@@ -27,7 +27,7 @@ module my_io
 
     ! Серия функций, потребовавшихся для вычислительного практикума
 
-    ! читает файл, заполняет колонку значений, границы аргументов и считает отмасштабированные значения
+    ! Читает файл, заполняет колонку значений, границы аргументов и считает отмасштабированные значения
     subroutine import_grid(path, array, a, b, mode)
         integer :: k, n
         real(mp) :: a, b
@@ -35,30 +35,14 @@ module my_io
         character(*) :: path, mode
         open(1, file=path, status='old')
             read(1,'(2x, i5)') n
-            allocate(array(2, n+1)) ! точек на одну больше, чем интервалов
-            read(1,*) a, b
+            allocate(array(2, 0:n)) ! точек на одну больше, чем интервалов
+            read(1,*) a, b, array(2, :) ! чтение границ и столбца игреков (второго)
             if (mode == 'uniform') then
-                do k = 0,n
-                    read(1,*) array(2, k+1)
-                    array(1, k+1) = 2*k/n - 1
-                end do
+                array(1, :) = [(2.0_mp*k/n - 1, k=0,n)] ! вычисление столбца иксов (первого)
             elseif (mode == 'chebyshev') then
-                do k = 0,n
-                    read(1,*) array(2, k+1)
-                    array(1, k+1) = cos((2*k + 1) / (2*n + 2) * PI)
-                end do
+                array(1, :) = [(cos((2.0_mp*k + 1) / (2.0_mp*n + 2) * PI), k=n,0,-1)]
             end if
         close(1)
-    end subroutine
-
-    ! растягивает отмасштабированную до [-1, 1] колонку аргументов на [a, b]
-    subroutine unscale_grid(array, a, b)
-        integer :: k, n
-        real(mp) :: a, b, array(:,:)
-        n = size(array, dim=2)
-        do k = 1,n
-            array(1, k) = a + ((b - a) * (array(1, k)+1) / 2)
-        end do
     end subroutine
 
     function import_matrix(path, mode) result(array)
@@ -83,6 +67,21 @@ module my_io
             end if
         close(1)
     end function
+
+    ! Записывает аргумент вызова под заданным номером в неразмещённую строку
+    subroutine read_argument(index, arg)
+        character(:), allocatable :: arg
+        integer, intent(in) :: index
+        integer :: arg_len, ios
+        call get_command_argument(number=index, length=arg_len)
+        allocate(character(arg_len) :: arg)
+        call get_command_argument(number=index, value=arg, status=ios)
+        if (ios > 0) then
+            write(*,*) 'Ошибка при чтении строки. Индекс ошибки '//str(ios)
+            stop 1
+        endif
+        write(*,*) 'Received "'//arg//'"'
+    end subroutine
 
 
     ! Серия функций str. Принимает целые и вещественные переменные, возвращает строку
@@ -127,11 +126,11 @@ module my_io
         write(*,'(a$)') text
         read(*,*,iostat=ios) v
         if (ios > 0) then
-            write(*,*) "Ошибка при чтении строки. Индекс ошибки "//str(ios)
+            write(*,*) 'Ошибка при чтении строки. Индекс ошибки '//str(ios)
             stop 1
         endif
-        write(*,*) "Received '"//v//"'"
-    end subroutine input_char
+        write(*,*) 'Received "'//v//'"'
+    end subroutine
 
     subroutine input_int(text, v)
         character(*), intent(in) :: text
@@ -140,7 +139,7 @@ module my_io
         write(*,'(a$)') text
         read(*,*,iostat=ios) v
         if (ios > 0) then
-            write(*,*) "Ошибка при чтении целого числа. Индекс ошибки "//str(ios)
+            write(*,*) 'Ошибка при чтении целого числа. Индекс ошибки '//str(ios)
             stop 1
         endif
         write(*,'("Received ", i0)') v
@@ -153,10 +152,10 @@ module my_io
         write(*,'(a$)') text
         read(*,*,iostat=ios) v
         if (ios > 0) then
-            write(*,*) "Ошибка при чтении вещ. числа. Индекс ошибки "//str(ios)
+            write(*,*) 'Ошибка при чтении вещ. числа. Индекс ошибки '//str(ios)
             stop 1
         endif
-        write(*,*) "Received", v
+        write(*,*) 'Received', v
     end subroutine
 
     subroutine read_int1D(v, ios)
@@ -204,7 +203,7 @@ module my_io
         integer :: ios
         write(*,'(a$)') text
         call read_int1D(v, ios)
-        call output_int1D("Received ", v)
+        call output_int1D('Received ', v)
     end subroutine
 
     subroutine read_int2D(v)
@@ -238,7 +237,7 @@ module my_io
         integer, allocatable, intent(out) :: v(:,:)
         write(*,'(a)') text
         call read_int2D(v)
-        call output_int2D("Received ", v)
+        call output_int2D('Received ', v)
     end subroutine
 
     subroutine read_real1D(v, ios)
