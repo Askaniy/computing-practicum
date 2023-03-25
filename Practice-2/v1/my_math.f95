@@ -6,35 +6,19 @@ module my_math
 
     contains
 
-    ! Возвращает интерполированный массив из сеточной функции и числа разбиений
-    ! Представление в виде двух колонок, x и f(x)
     function polynomial_interp(grid, q, a, b) result(interpolated)
-        integer, intent(in) :: q
+        integer, intent(in) :: q ! число разбиений интервала
         integer :: n, m
-        real(mp), intent(in) :: grid(:, 0:), a, b
-        real(mp) :: interpolated(2, 0:(size(grid, dim=2)-1)*q)
-        real(mp) :: lagrange_basis, numerator, denominator
-        
+        real(mp), intent(in) :: grid(:, 0:), a, b ! начальная сетка в виде колонок x, f(x)
+        real(mp) :: interpolated(2, 0:(size(grid, dim=2)-1)*q) ! результат в том же виде
         n = size(grid, dim=2) - 1
         m = size(interpolated, dim=2) - 1 ! число интервалов
-        
-        interpolated(1, :) = [(a + j*(b-a)/m, j=0,m)]
-        
-        do j = 0,m
-            interpolated(2, j) = 0.0_mp
-            do k = 0,n
-                numerator = 1.0_mp
-                denominator = 1.0_mp
-                do i = 0,n
-                    if (i /= k) then
-                        numerator = numerator * (interpolated(1, j) - grid(1, i))
-                        denominator = denominator * (grid(1, k) - grid(1, i))
-                    end if
-                end do
-                lagrange_basis = numerator / denominator
-                interpolated(2, j) = interpolated(2, j) + grid(2, k) * lagrange_basis
-            end do
-        end do
+        interpolated(1,:) = [(a + j*(b-a)/m, j=0,m)]
+        interpolated(2,:) = [(dot_product( & ! интерполяционный полином
+                                grid(2,:), [(product( & ! интерполяционный базис
+                                    (interpolated(1,j) - grid(1,:)) / (grid(1,k) - grid(1,:)), &
+                                    mask = grid(1,k)/=grid(1,:)), k=0,n)]), &
+                            j=0,m)]
     end function
     
     function integrate(f, a, b, n, mode) result(s)

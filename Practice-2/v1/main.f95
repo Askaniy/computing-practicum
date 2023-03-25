@@ -7,12 +7,11 @@ program quest2v1
     integer, parameter :: q = 50 ! шаг интерполяции
     real(mp) :: a, b
     real(mp), allocatable :: grid(:,:), interpolated(:,:)
-    character(10) :: mode
+    character(:), allocatable :: mode
 
-    call get_command_argument(1, mode)
-    write(*,*) '"'//mode//'"'
+    call read_argument(1, mode)
 
-    call import_grid(trim(mode)//'.dat', grid, a, b, trim(mode))
+    call import_grid(mode//'.dat', grid, a, b, mode)
     call output('grid = ', grid)
 
     n = size(grid, dim=2) - 1 ! число интервалов сетки
@@ -23,10 +22,10 @@ program quest2v1
     interpolated = polynomial_interp(grid, q, a, b)
     m = size(interpolated, dim=2) - 1 ! m=q*n, число интервалов интерполированной функции
 
-    open(1, file='res_'//trim(mode)//'.dat')
+    open(1, file='res_'//mode//'.dat')
         write(1,'("# ", i0)') m
         do j = 1,m+1
-            write(1,'(2e11.'//str(dp)//')') interpolated(:, j)
+            write(1,'(2e'//str(8+dp)//'.'//str(dp)//')') interpolated(:, j)
         end do
     close(1)
 
