@@ -8,7 +8,7 @@ module my_math
 
     function solve_sle(a, b, mode) result(x)
         real(mp), intent(in) :: a(:,:), b(:)
-        real(mp) :: a0(size(b)+1,size(b)), a1(size(b)+1,size(b)), x(size(b))
+        real(mp) :: a0(size(b)+1,size(b)), a1(size(b)+1,size(b)), x(size(b))!, temp_row(size(b)+1)
         integer :: n
         character(*), optional :: mode
         if (.not. present(mode)) then
@@ -16,20 +16,26 @@ module my_math
         end if
         n = size(b) ! размер системы СЛУ
         if (mode == 'gaussian') then
-            a0 = a
+            a0(:n,:) = a
             a0(n+1,:) = b
-            call output('a0 =', a0)
-            a1 = 0
+            !call output('a0 =', a0)
+            a1 = a0
+            ! Шаг 1
             do k = 1,n
-                a1(:,k) = a0(:,k) / a0(k,k)
-                !call output('temp =', reshape([( a1(k:,k) * a0(k,k+1), i=k+1,n )], (/n+1-k, n-1-k/) ))
-                ! не работает a1(k:,k+1:) = a0(k:,k+1:) - a1(k:,k) * a0(k,k+1)
-                call output('temp', reshape( [( a0(k:,j) - a1(k:,k) * a0(k,k+1), j=k+1,n )], shape(a1(k:,k+1:)) ))
-                a1(k:,k+1:) = reshape( [( a0(k:,j) - a1(k:,k) * a0(k,k+1), j=k+1,n )], shape(a1(k:,k+1:)) )
-                call output('k='//str(k)//':', a1)
+                if (abs(a0(k,k)) < 0.01) then
+                    write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
+                end if
+                a1(k:,k) = a0(k:,k) / a0(k,k)
+                a1(k:,k+1:) = reshape( [( a0(k:,j) - a1(k:,k) * a0(k,j), j=k+1,n )], shape(a1(k:,k+1:)) )
+                a0 = a1
+                call output('k='//str(k)//', a =', a0)
             end do
-            x = b
-            !a(:,)
+            ! Шаг 2
+            x(n) = a0(n+1,n)
+            do j=n-1,1,-1
+                a0 = a0(n+1,j) - sum(a0(j+1:n,:)) !!!
+                x(j) = a0(n+1,j)
+            end do
         end if
     end function
 
