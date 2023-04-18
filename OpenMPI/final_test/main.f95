@@ -6,7 +6,8 @@ program MPItest
     
     integer(4) :: Err, Rank, mpiSize
 
-    integer :: n, i, j, k, band_num, band_len
+    integer :: n, i, j, b, band_num, band_len, step
+	integer, parameter :: k=10, max_step=100 ! шаг итераций записи в файл и максимальное количество шагов
     real(mp), allocatable :: qh2(:,:), u0(:,:), u1(:,:)
     
     call mpi_init(Err)
@@ -27,18 +28,25 @@ program MPItest
 		    read(1,*) qh2(1:n, 1:n)
 			band_len = n / band_num
 		close(1)
-		call output('qh2 =', qh2)
 
 		! Нулевая итерация
 		u0 = 0
 		call save_u(u0, 0)
 
-		do k=1,band_num
-			forall (i=(k-1)*band_len+1:k*band_len, j=1:n)
-				u1(i, j) = (u0(i+1, j) + u0(i-1, j) + u0(i, j+1) + u0(i, j-1) + qh2(i, j)) / 4
-			end forall
+		! Первая и далее
+		u1 = 0
+		do step=1,max_step
+			do b=1,band_num
+				forall (i=(b-1)*band_len+1:b*band_len, j=1:n)
+					u1(i, j) = (u0(i+1, j) + u0(i-1, j) + u0(i, j+1) + u0(i, j-1) + qh2(i, j)) / 4
+				end forall
+			end do
+			if (mod(step, k) == 0) then
+				call save_u(u1, step)
+				call output('u'//str(step)//' =', u1)
+			end if
+			u0 = u1
 		end do
-		call save_u(u1, 1)
 
 	end if
 
@@ -47,14 +55,13 @@ program MPItest
 	contains
 
 	subroutine save_u(u, indx)
-        real(mp), intent(in) :: u(0:,0:)
+        real(mp), intent(in) :: u(:,:)
 		integer :: m, indx, row
-
 		m = size(u, dim=2)
-		open(1, file='data'//str(indx)//'.dat')
+		open(1, file='data/data'//str(indx)//'.dat')
 			write(1,'("# ", i0)') m-2
-			do row = 1,m-1
-				write(1,'('//str(m)//'(e10.'//str(dp)//'))') u(:, row)
+			do row = 2,m-1
+				write(1,'('//str(m)//'(f10.'//str(dp)//'))') u(2:m-1, row)
 			end do
 		close(1)
 	end subroutine
