@@ -2,7 +2,7 @@ module my_io
     implicit none
 
     integer, parameter :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
-    integer, parameter :: dp = 5 ! "decimal places", число знаков после запятой в форматированном выводе
+    integer, parameter :: dp = 3 ! "decimal places", число знаков после запятой в форматированном выводе
 
     integer, parameter, private :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter, private :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
