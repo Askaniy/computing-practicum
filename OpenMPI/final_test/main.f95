@@ -43,7 +43,7 @@ program MPItest
 			end do
 			if (mod(step, k) == 0) then
 				call save_u(u1, step)
-				call output('u'//str(step)//' =', u1)
+				!call output('u'//str(step)//' =', u1)
 			end if
 			u0 = u1
 		end do
