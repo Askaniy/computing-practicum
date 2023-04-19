@@ -49,6 +49,7 @@ program MPIfinaltest
 
 	do step=1,max_step
 		if (myid == 0) then
+			write(*,*) 'Шаг '//str(step)
 			if (mod(step, k) == 0) then
 				! собираем поля в u1
 				do b=1,band_num
@@ -62,7 +63,7 @@ program MPIfinaltest
 				if (myid == 1) then
 					! получаем только от id=2
 					call mpi_recv(u0_crop(band_len+1, :), n, mpi_real4, 2, 009, mpi_comm_world, status, err)
-				else if (myid == band_num)
+				else if (myid == band_num) then
 					! получаем только от id=band_num-1
 					call mpi_recv(u0_crop(n-band_len, :), n, mpi_real4, band_num-1, 900, mpi_comm_world, status, err)
 				else
@@ -78,7 +79,7 @@ program MPIfinaltest
 
 			if (mod(step, k) == 0) then
 				! отправляем поле
-				call mpi_recv(u1_crop(1:band_len, 1:n), band_len*n, mpi_real4, 0, 999, mpi_comm_world, err)
+				call mpi_send(u1_crop(1:band_len, 1:n), band_len*n, mpi_real4, 0, 999, mpi_comm_world, err)
 			end if
 
 			if (step /= max_step) then
@@ -86,7 +87,7 @@ program MPIfinaltest
 				if (myid == 1) then
 					! отправляем только id=2
 					call mpi_send(u1_crop(band_len+1, :), n, mpi_real4, 2, 009, mpi_comm_world, err)
-				else if (myid == band_num)
+				else if (myid == band_num) then
 					! отправляем только id=band_num-1
 					call mpi_send(u1_crop(n-band_len, :), n, mpi_real4, band_num-1, 900, mpi_comm_world, err)
 				else
@@ -110,7 +111,7 @@ program MPIfinaltest
 		open(1, file='data/data'//str(indx)//'.dat')
 			write(1,'("# ", i0)') m
 			do row = 1,m
-				write(1,'('//str(m)//'(f10.'//str(dp)//'))') u(: row)
+				write(1,'('//str(m)//'(f10.'//str(dp)//'))') u(:, row)
 			end do
 		close(1)
 	end subroutine
