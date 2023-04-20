@@ -49,7 +49,7 @@ program MPIfinaltest
 
 	do step=1,max_step
 		if (myid == 0) then
-			write(*,*) 'Шаг '//str(step)
+			write(*,*) 'Координирующий поток, шаг '//str(step)
 			if (mod(step, k) == 0) then
 				! собираем поля в u1
 				do b=1,band_num
@@ -59,6 +59,7 @@ program MPIfinaltest
 			end if
 		else
 			if (step /= 1) then
+				write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': начинаю получать границы'
 				! получаем и записываем границы
 				if (myid == 1) then
 					! получаем только от id=2
@@ -83,6 +84,7 @@ program MPIfinaltest
 			end if
 
 			if (step /= max_step) then
+				write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': начинаю раздавать границы'
 				! отправляем границы соседним полям
 				if (myid == 1) then
 					! отправляем только id=2
@@ -92,12 +94,15 @@ program MPIfinaltest
 					call mpi_send(u1_crop(n-band_len, :), n, mpi_real4, band_num-1, 900, mpi_comm_world, err)
 				else
 					! отправляем id-1 и id+1
-					call mpi_send(u1_crop(myid*band_len+1, :), n, mpi_real4, myid+1, 109, mpi_comm_world, err)
+					call mpi_send(u1_crop((myid-1)*band_len, :), n, mpi_real4, myid-1, 109, mpi_comm_world, err)
+					call mpi_send(u1_crop(myid*band_len+1, :), n, mpi_real4, myid+1, 901, mpi_comm_world, err)
 				end if
 			end if
 
 			u0_crop = u1_crop
 		end if
+
+		call mpi_barrier(mpi_comm_world, err)
 	end do
 
     call mpi_finalize(err)
