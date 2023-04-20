@@ -9,7 +9,7 @@ program MPIfinaltest
 
     integer(4) :: n, i, j, b, band_num, band_len, step
 	integer, parameter :: k=10, max_step=100 ! шаг итераций при записи в файл и максимальное количество шагов
-    real(mp), allocatable :: qh2(:,:), qh2_crop(:,:), u(:,:), u0_crop(:,:), u1_crop(:,:)
+    real(mp), allocatable :: qh2(:,:), qh2_crop(:,:), u(:,:), u_crop(:,:)
     
     call mpi_init(err)
     call mpi_comm_size(mpi_comm_world, nproc, err)
@@ -41,10 +41,8 @@ program MPIfinaltest
 		allocate(qh2_crop(band_len, n))
 		call mpi_recv(qh2_crop, band_len*n, mpi_real4, 0, 666, mpi_comm_world, status, err)
 		! размещаем поля
-		allocate(u0_crop(0:band_len+1, 0:n+1))
-		u0_crop = 0
-		allocate(u1_crop(0:band_len+1, 0:n+1))
-		u1_crop = 0
+		allocate(u_crop(0:band_len+1, 0:n+1))
+		u_crop = 0
 	end if
 
 	do step=1,max_step
@@ -58,48 +56,30 @@ program MPIfinaltest
 				call save_u(u, step)
 			end if
 		else
-			if (step /= 1) then
-				write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': начинаю получать границы'
-				! получаем и записываем границы
-				if (myid == 1) then
-					! получаем только от id=2
-					call mpi_recv(u0_crop(band_len+1, :), n, mpi_real4, 2, 009, mpi_comm_world, status, err)
-				else if (myid == band_num) then
-					! получаем только от id=band_num-1
-					call mpi_recv(u0_crop(n-band_len, :), n, mpi_real4, band_num-1, 900, mpi_comm_world, status, err)
-				else
-					! получаем от myid-1 и myid+1
-					call mpi_recv(u0_crop((myid-1)*band_len, :), n, mpi_real4, myid-1, 901, mpi_comm_world, status, err)
-					call mpi_recv(u0_crop(myid*band_len+1, :), n, mpi_real4, myid+1, 109, mpi_comm_world, status, err)
-				end if
-			end if
-
 			forall (i=1:band_len, j=1:n)
-				u1_crop(i, j) = (u0_crop(i+1, j) + u0_crop(i-1, j) + u0_crop(i, j+1) + u0_crop(i, j-1) + qh2_crop(i, j)) / 4
+				u_crop(i, j) = (u_crop(i+1, j) + u_crop(i-1, j) + u_crop(i, j+1) + u_crop(i, j-1) + qh2_crop(i, j)) / 4
 			end forall
 
 			if (mod(step, k) == 0) then
 				! отправляем поле
-				call mpi_send(u1_crop(1:band_len, 1:n), band_len*n, mpi_real4, 0, 999, mpi_comm_world, err)
+				call mpi_send(u_crop(1:band_len, 1:n), band_len*n, mpi_real4, 0, 999, mpi_comm_world, err)
 			end if
 
 			if (step /= max_step) then
-				write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': начинаю раздавать границы'
+				write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': начинаю обмениваться границами'
 				! отправляем границы соседним полям
 				if (myid == 1) then
 					! отправляем только id=2
-					call mpi_send(u1_crop(band_len+1, :), n, mpi_real4, 2, 009, mpi_comm_world, err)
+					call mpi_sendrecv_replace(u_crop(band_len+1, :), n, mpi_real4, 2, 000, 1, 000, mpi_comm_world, status, err)
 				else if (myid == band_num) then
 					! отправляем только id=band_num-1
-					call mpi_send(u1_crop(n-band_len, :), n, mpi_real4, band_num-1, 900, mpi_comm_world, err)
+					call mpi_sendrecv_replace(u_crop(n-band_len, :), n, mpi_real4, band_num-1, 000, band_num, 000, mpi_comm_world, status, err)
 				else
 					! отправляем id-1 и id+1
-					call mpi_send(u1_crop((myid-1)*band_len, :), n, mpi_real4, myid-1, 109, mpi_comm_world, err)
-					call mpi_send(u1_crop(myid*band_len+1, :), n, mpi_real4, myid+1, 901, mpi_comm_world, err)
+					call mpi_sendrecv_replace(u_crop((myid-1)*band_len, :), n, mpi_real4, myid-1, 000, myid, 000, mpi_comm_world, status, err)
+					call mpi_sendrecv_replace(u_crop(myid*band_len+1, :), n, mpi_real4, myid+1, 000, myid, 000, mpi_comm_world, status, err)
 				end if
 			end if
-
-			u0_crop = u1_crop
 		end if
 
 		call mpi_barrier(mpi_comm_world, err)
