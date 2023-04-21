@@ -15,7 +15,6 @@ program MPIfinaltest
     call mpi_comm_size(mpi_comm_world, nproc, err)
     call mpi_comm_rank(mpi_comm_world, myid, err)
 	band_num = nproc - 1
-    !write(*,*) str(myid)//'/'//str(band_num)
 
 	if (myid == 0) then ! чтение в координаторе и нулевая итерация
 		open(1, file='sources.dat', status='old')
@@ -48,6 +47,8 @@ program MPIfinaltest
 	end if
 
 	do step=1,max_step
+		call mpi_barrier(mpi_comm_world, err)
+		
 		if (myid == 0) then
 			write(*,*) 'Координирующий поток: шаг '//str(step)//' начался'
 			if (mod(step, k) == 0) then
@@ -57,29 +58,31 @@ program MPIfinaltest
 				end do
 				call save_u(u, step)
 			end if
-		else
-			! меняемся границами
-			if (step /= 1) then
-				write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': начинаю обмениваться границами'
+		end if
+		
+		call mpi_barrier(mpi_comm_world, err)
+
+		if (myid /= 0) then
+			if (step /= 1) then ! обмен границами
 				if (myid == 1) then
 					! это левое поле, меняемся с id=2
-					write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': попытка обмена с id=2...'
+					write(*,*) 'Поток 1: попытка обмена с потоком 2...'
 					border = u_crop(band_len, :)
 					call mpi_sendrecv_replace(border, n, mpi_real4, 2, 000, 1, 000, mpi_comm_world, status, err)
 					u_crop(band_len+1, :) = border
 				else if (myid == band_num) then
 					! это правое поле, меняемся с id=band_num-1
-					write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': попытка обмена с id='//str(band_num-1)//'...'
+					write(*,*) 'Поток '//str(myid)//': попытка обмена с потоком '//str(band_num-1)//'...'
 					border = u_crop(band_len+1, :)
 					call mpi_sendrecv_replace(u_crop(n-band_len, :), n, mpi_real4, band_num-1, 000, band_num, 000, mpi_comm_world, status, err)
 					u_crop(n-band_len, :) = border
 				else
 					! это внутреннее поле, меняемся с id-1 и id+1
-					write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': (1/2) попытка обмена с id='//str(myid-1)//'...'
+					write(*,*) 'Поток '//str(myid)//': (1/2) попытка обмена с потоком '//str(myid-1)//'...'
 					border = u_crop((myid-1)*band_len+1, :)
 					call mpi_sendrecv_replace(border, n, mpi_real4, myid-1, 000, myid, 000, mpi_comm_world, status, err)
 					u_crop((myid-1)*band_len, :) = border
-					write(*,*) 'Поток '//str(myid)//', шаг '//str(step)//': (2/2) попытка обмена с id='//str(myid+1)//'...'
+					write(*,*) 'Поток '//str(myid)//': (2/2) попытка обмена с потоком '//str(myid+1)//'...'
 					border = u_crop(myid*band_len, :)
 					call mpi_sendrecv_replace(border, n, mpi_real4, myid+1, 000, myid, 000, mpi_comm_world, status, err)
 					u_crop(myid*band_len+1, :) = border
@@ -99,6 +102,7 @@ program MPIfinaltest
 		end if
 
 		call mpi_barrier(mpi_comm_world, err)
+
 	end do
 
     call mpi_finalize(err)
