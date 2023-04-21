@@ -7,10 +7,14 @@ program MPIfinaltest
     integer(4) :: err, myid, nproc
     integer, dimension(mpi_status_size) :: status
 
-    integer(4) :: n, i, j, b, band_num, band_len, step
+    integer(4) :: n, i, j, step, b, band_num, band_len ! итераторы, количество и длина полей
 	integer, parameter :: k=10, & ! количество шагов между записями в файл
 						max_step=100 ! максимальное количество шагов
-    real(mp), allocatable :: qh2(:,:), qh2_crop(:,:), u(:,:), u_crop(:,:), border(:)
+    real(mp), allocatable :: qh2(:,:), qh2_crop(:,:), & ! карта источников нагрева (оригинал и обрезанная)
+							u(:,:), u_crop(:,:), & ! обновлемая карта температуры (оригинал и обрезанная)
+							border(:) ! буфер передачи границ между потоками, обрабатывающие поля u_crop
+	! тут так просто точность не сменить: внутри модулей всё завязано на mp,
+	! а для MPI завязано на константах mpi_real4, красивую реализацию точности сделать сложно
     
     call mpi_init(err)
     call mpi_comm_size(mpi_comm_world, nproc, err)
@@ -20,10 +24,12 @@ program MPIfinaltest
 	if (myid == 0) then ! чтение источника в координаторе
 		open(1, file='sources.dat', status='old')
 		    read(1,'(2x, i5)') n
-		    allocate(qh2(n, n), u(n, n))
+		    allocate(qh2(n, n))
 		    read(1,*) qh2
-			band_len = n / band_num
 		close(1)
+		! обрезаем ширину карты справа, если она не разбивается на количество потоков
+		band_len = n / band_num
+		allocate(u(band_len*band_num, n))
 		! нулевая итерация
 		u = 0
 		call save_file(u, 0)
@@ -33,6 +39,7 @@ program MPIfinaltest
 			call mpi_send(n, 1, mpi_integer4, b, 200, mpi_comm_world, err)
 			call mpi_send(qh2(band_len*(b-1)+1:band_len*b, :), band_len*n, mpi_real4, b, 666, mpi_comm_world, err)
 		end do
+		deallocate(qh2)
 	else
 		! получаем базовые параметры в потоках
 		call mpi_recv(band_len, 1, mpi_integer4, 0, 100, mpi_comm_world, status, err)
@@ -106,12 +113,17 @@ program MPIfinaltest
 
 	subroutine save_file(array, indx)
         real(mp), intent(in) :: array(:,:)
-		integer :: m, indx, row
-		m = size(array, dim=2)
+		integer :: x_size, y_size, indx, row
+		x_size = size(array, dim=1)
+		y_size = size(array, dim=2)
 		open(1, file='data/data'//str(indx)//'.dat')
-			write(1,'("# ", i0)') m
-			do row = 1,m
-				write(1,'('//str(m)//'(f10.'//str(dp)//'))') array(:, row)
+			if (x_size == y_size) then
+				write(1,'("# ", i0)') y_size
+			else
+				write(1,'("# ", i0, " ", i0)') x_size, y_size
+			end if
+			do row = 1,y_size
+				write(1,'('//str(y_size)//'(f9.'//str(dp)//'))') array(:, row)
 			end do
 		close(1)
 	end subroutine
