@@ -15,8 +15,9 @@ for file in Path('./data/').iterdir():
             data.append(file_data)
             print(f'{file} прочитан')
 
-mx = np.max(data)
+name = 'cat.gif'
 
+mx = np.max(data)
 img0 = to_img(data[0], mx)
-img0.save('cat.gif', save_all=True, loop=0, append_images=[to_img(frame, mx) for frame in data[1:]])
-print('Анимация успешно составлена и сохранена')
+img0.save(name, save_all=True, loop=0, append_images=[to_img(frame, mx) for frame in data[1:]])
+print(f'Анимация {name} успешно составлена и сохранена')

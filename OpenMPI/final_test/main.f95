@@ -9,7 +9,7 @@ program MPIfinaltest
 
     integer(4) :: n, i, j, step, b, band_num, band_len ! итераторы, количество и длина полей
 	integer, parameter :: k=10, & ! количество шагов между записями в файл
-						max_step=1000 ! максимальное количество шагов
+						max_step=500 ! максимальное количество шагов
     real(mp), allocatable :: qh2(:,:), qh2_crop(:,:), & ! карта источников нагрева (оригинал и обрезанная)
 							u(:,:), u_crop(:,:), & ! обновлемая карта температуры (оригинал и обрезанная)
 							border(:) ! буфер передачи границ между потоками, обрабатывающие поля u_crop
@@ -57,7 +57,7 @@ program MPIfinaltest
 	do step=1,max_step
 		
 		if (myid == 0) then
-			write(*,*) 'Координирующий поток: шаг '//str(step)//' начался'
+			!write(*,*) 'Координирующий поток: шаг '//str(step)//' начался'
 		else
 			if (step /= 1) then ! обмен границами со второго шага
 				if (myid == 1) then ! это левое поле
@@ -80,7 +80,7 @@ program MPIfinaltest
 					call mpi_sendrecv_replace(border, n, mpi_real4, myid+1, 000, myid+1, 000, mpi_comm_world, status, err)
 					u_crop(band_len+1, :) = border
 				end if
-				write(*,*) 'Поток '//str(myid)//': успешный обмен'
+				!write(*,*) 'Поток '//str(myid)//': успешный обмен'
 			end if
 
 			forall (i=1:band_len, j=1:n)
@@ -93,13 +93,13 @@ program MPIfinaltest
 		if (mod(step, k) == 0) then ! каждые k шагов
 			if (myid /= 0) then ! отправляем поле
 				call mpi_send(u_crop(1:band_len, 1:n), band_len*n, mpi_real4, 0, 999, mpi_comm_world, err)
-				write(*,*) 'Поток '//str(myid)//': поле отправлено'
+				!write(*,*) 'Поток '//str(myid)//': поле отправлено'
 			else ! получаем поля
-				write(*,*) 'Координирующий поток: попытка получения полей'
+				write(*,*) 'Координирующий поток, шаг '//str(step)//': попытка получения полей'
 				do b=1,band_num
 					call mpi_recv(u(band_len*(b-1)+1:band_len*b, :), band_len*n, mpi_real4, b, 999, mpi_comm_world, status, err)
 				end do
-				write(*,*) 'Координирующий поток: все поля получены'
+				write(*,*) 'Координирующий поток, шаг '//str(step)//': все поля получены'
 				call save_file(u, step)
 			end if
 		end if
