@@ -1,26 +1,22 @@
 from pathlib import Path
-#from PIL import Image, ImageDraw
+from PIL import Image
 import numpy as np
-from array2gif import write_gif
 
-def colorizing(value):
-    return [value] * 3
-color = np.vectorize(colorizing)
-
+def to_img(arr, mx):
+    img = Image.fromarray((arr * 255 / mx).astype('int8'))
+    return img.resize(tuple(np.array(img.size)*16), resample=Image.Resampling.NEAREST)
 
 data = []
 
 for file in Path('./data/').iterdir():
     if file.suffix == '.dat' and not file.is_dir():
         with open(file) as f:
-            n = int(f.readline().split('#')[-1])
             file_data = np.loadtxt(f)
+            data.append(file_data)
             print(f'{file} прочитан')
-            data.append(np.reshape([file_data]*3, (3,n,n)))
 
+mx = np.max(data)
 
-data = np.array(data) / np.max(data) * 255
-
-#Image.fromarray(data)
-
-write_gif(data.astype('uint8'), 'test.gif', fps=5)
+img0 = to_img(data[0], mx)
+img0.save('cat.gif', save_all=True, loop=0, append_images=[to_img(frame, mx) for frame in data[1:]])
+print('Анимация успешно составлена и сохранена')
