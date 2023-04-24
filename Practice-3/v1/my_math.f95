@@ -12,13 +12,13 @@ module my_math
         integer :: n
         character(*), optional :: mode
         if (.not. present(mode)) then
-            mode = 'gaussian'
+            mode = 'gaussian' ! выбор по умолчанию
         end if
         n = size(b) ! размер системы СЛУ
         if (mode == 'gaussian') then
             a0(:n,:) = a
             a0(n+1,:) = b
-            !call output('a0 =', a0)
+            call output('k=0, a =', a0)
             a1 = a0
             ! Шаг 1
             do k = 1,n
@@ -33,8 +33,7 @@ module my_math
             ! Шаг 2
             x(n) = a0(n+1,n)
             do j=n-1,1,-1
-                a0 = a0(n+1,j) - sum(a0(j+1:n,:)) !!!
-                x(j) = a0(n+1,j)
+                x(j) = a0(n+1,j) - dot_product(a0(j+1:n,j), x(j+1:n))
             end do
         end if
     end function

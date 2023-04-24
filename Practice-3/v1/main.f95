@@ -19,7 +19,7 @@ program quest3v1
 
     x = solve_sle(a, b, mode=mode)
     call output('X =', x)
-    !matrix(0.2187202664129401 0.8013796384395814 0.2724785918173168 -0.2847288296860133 0.3342055185537584)
+    ! 1 2 2 0
 
     open(1, file='result.dat')
         write(1,'("# ", i0)') n
