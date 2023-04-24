@@ -6,34 +6,37 @@ module my_math
 
     contains
 
-    function solve_sle(a, b, mode) result(x)
-        real(mp), intent(in) :: a(:,:), b(:)
-        real(mp) :: a0(size(b)+1,size(b)), a1(size(b)+1,size(b)), x(size(b))!, temp_row(size(b)+1)
+    function solve_sle(a0, b0, mode) result(x)
+        real(mp), intent(in) :: a0(:,:), b0(:)
+        real(mp) :: a(size(b0)+1,size(b0)), x(size(b0))!, temp_row(size(b0)+1)
         integer :: n
         character(*), optional :: mode
         if (.not. present(mode)) then
             mode = 'gaussian' ! выбор по умолчанию
         end if
-        n = size(b) ! размер системы СЛУ
-        if (mode == 'gaussian') then
-            a0(:n,:) = a
-            a0(n+1,:) = b
-            call output('k=0, a =', a0)
-            a1 = a0
-            ! Шаг 1
-            do k = 1,n
-                if (abs(a0(k,k)) < 0.01) then
-                    write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
-                end if
-                a1(k:,k) = a0(k:,k) / a0(k,k)
-                a1(k:,k+1:) = reshape( [( a0(k:,j) - a1(k:,k) * a0(k,j), j=k+1,n )], shape(a1(k:,k+1:)) )
-                a0 = a1
-                call output('k='//str(k)//', a =', a0)
+        write(*,*) 'Решение системы в режиме '//mode
+        n = size(b0) ! размер СЛУ
+        a(:n,:) = a0
+        a(n+1,:) = b0
+        call output('k=0, a =', a)
+        do k = 1,n ! Переход к треугольной матрице
+            if (abs(a(k,k)) < 0.01) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
+            !if (mode == 'mainch') then
+            !end if
+            a(k:,k) = a(k:,k) / a(k,k)
+            !a1(k:,k+1:) = reshape( [( a0(k:,j) - a1(k:,k) * a0(k,j), j=k+1,n )], shape(a1(k:,k+1:)) )
+            forall (j=k+1:n) a(k:,j) = a(k:,j) - a(k:,k) * a(k,j) ! вдохновлено разбором
+            call output('k='//str(k)//', a =', a)
+        end do
+        if (mode == 'jordan') then
+            do j=n,1,-1
+                a(n+1,1:j-1) = a(n+1,1:j-1) - a(j,1:j-1) * a(n+1,j)
             end do
-            ! Шаг 2
-            x(n) = a0(n+1,n)
+            x = a(n+1, :)
+        else ! схема с Гауссом или выбором
+            x(n) = a(n+1,n)
             do j=n-1,1,-1
-                x(j) = a0(n+1,j) - dot_product(a0(j+1:n,j), x(j+1:n))
+                x(j) = a(n+1,j) - dot_product(a(j+1:n,j), x(j+1:n))
             end do
         end if
     end function
