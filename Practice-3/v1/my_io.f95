@@ -8,6 +8,10 @@ module my_io
     integer, parameter, private :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
 
     real(mp), parameter :: PI = 4*atan(1.0_mp)
+
+    interface swap
+        module procedure swap_int, swap_real
+    end interface
     
     interface str
         module procedure str_int, str_real
@@ -77,6 +81,26 @@ module my_io
             stop 1
         endif
         write(*,*) 'Received "'//arg//'"'
+    end subroutine
+
+
+    ! Серия подпрограмм swap. Переставляет что угодно. Своровано у Кати
+    ! Пример использования: call swap(matrix(j,:), matrix(k,:))
+
+    elemental subroutine swap_int(a, b)
+        integer, intent(inout) :: a, b
+        integer :: tmp
+        tmp = a
+        a = b
+        b = tmp
+    end subroutine
+
+    elemental subroutine swap_real(a, b)
+        real(mp), intent(inout) :: a, b
+        real(mp) :: tmp
+        tmp = a
+        a = b
+        b = tmp
     end subroutine
 
 
