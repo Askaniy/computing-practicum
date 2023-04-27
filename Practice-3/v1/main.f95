@@ -3,7 +3,7 @@ program quest3v1
     use my_math
     implicit none
 
-    integer :: n, i
+    integer :: n
     real(mp), allocatable :: a(:,:), b(:), x(:)
     character(:), allocatable :: mode
 
@@ -23,7 +23,10 @@ program quest3v1
 
     open(1, file='result.dat')
         write(1,'("# ", i0)') n
-        write(1,'(f0.'//str(dp)//')') (x(i), i=1,n)
+        write(1,'(f0.'//str(dp)//')') x
     close(1)
+
+    write(*,*) 'Невязка:', sqrt(sum(matmul(transpose(a), x) - b)**2)
+                                    ! хотел заменить на свою multiply, но не разобрался с одномерным результатом
     
 end program
