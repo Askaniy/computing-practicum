@@ -1,13 +1,17 @@
 module my_io
     implicit none
 
-    integer, parameter :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
-    integer, parameter :: dp = 5 ! "decimal places", число знаков после запятой в форматированном выводе
+    private
+    public str, input, output, isspacesymbol, isspace, lower, upper, &
+        swap, read_argument, import_grid, import_matrix
 
-    integer, parameter, private :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
-    integer, parameter, private :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
+    integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
+    integer, parameter, public :: dp = 5 ! "decimal places", число знаков после запятой в форматированном выводе
 
-    real(mp), parameter :: PI = 4*atan(1.0_mp)
+    integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
+    integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
+
+    real(mp), parameter, public :: PI = 4*atan(1.0_mp)
 
     interface swap
         module procedure swap_int, swap_real

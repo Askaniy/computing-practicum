@@ -2,6 +2,13 @@ module my_math
     use my_io !use, intrinsic :: ieee_arithmetic
     implicit none
 
+    private
+    public solve_sle, polynomial_interp, integrate, multiply
+    
+    interface multiply
+        module procedure multiply_1Dvar0, multiply_1Dvar1, multiply_1Dvar2, multiply_2D
+    end interface
+
     integer, private :: i, j, k
 
     contains
@@ -55,12 +62,19 @@ module my_math
                                     mask = grid(1,k)/=grid(1,:)), k=0,n)]), &
                             j=0,m)]
     end function
-    
+
+
+    ! Серия функций integrate. Принимает функцию, интервал и число промежутков
+    ! Пример использования: integrate(f, 0, 10, 100, 'rectangle')
+
     function integrate(f, a, b, n, mode) result(s)
         integer :: n, m
         real(mp), external :: f
         real(mp) :: s, a, b, h
-        character(*) :: mode
+        character(*), optional :: mode
+        if (.not. present(mode)) then
+            mode = 'simpson' ! выбор по умолчанию
+        end if
         h = (b - a) / n
         if (mode == 'rectangle') then
             s = 0
@@ -97,14 +111,35 @@ module my_math
         s = h/3 * (f(a) + f(b) + 4*s1 + 2*s2)
     end function
 
-    function multiply(a, b, mode) result(c) ! не протестировано!
+
+    ! Серия функций multiply. Принимает одномерные и двумерные вещественные массивы
+    ! Пример использования: sqrt(sum(multiply(a, x) - b)**2) ! невязка
+
+    function multiply_1Dvar0(a, b) result(c)
+        real(mp), intent(in) :: a(:), b(:)
+        real(mp) :: c(size(b))
+        c = dot_product(a, b)
+    end function
+
+    function multiply_1Dvar1(a, b) result(c)
+        real(mp), intent(in) :: a(:,:), b(:)
+        real(mp) :: c(size(b))
+        c = matmul(transpose(a), b)
+    end function
+
+    function multiply_1Dvar2(a, b) result(c)
+        real(mp), intent(in) :: a(:), b(:,:)
+        real(mp) :: c(size(a))
+        c = matmul(a, transpose(b))
+    end function
+
+    function multiply_2D(a, b, mode) result(c)
         real(mp), intent(in) :: a(:,:), b(:,:)
         real(mp), allocatable :: c(:,:)
         character(*), optional :: mode
         if (.not. present(mode)) then
-            allocate(c(size(b, dim=1), size(a, dim=2)))
-            c = matmul(transpose(a), transpose(b))
-        elseif (mode == 'tridiagonal') then
+            c = transpose(matmul(transpose(a), transpose(b)))
+        elseif (mode == 'tridiagonal') then ! не протестировано!
             c = tridiagonal(a, b)
         end if
     end function
