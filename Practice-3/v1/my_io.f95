@@ -73,16 +73,17 @@ module my_io
     end function
 
     ! Записывает аргумент вызова под заданным номером в неразмещённую строку
-    subroutine read_argument(index, arg)
+    subroutine read_argument(index, arg, default)
         character(:), allocatable :: arg
         integer, intent(in) :: index
         integer :: arg_len, ios
+        character(*), optional :: default
         call get_command_argument(number=index, length=arg_len)
         allocate(character(arg_len) :: arg)
         call get_command_argument(number=index, value=arg, status=ios)
         if (ios > 0) then
-            write(*,*) 'Ошибка при чтении строки. Индекс ошибки '//str(ios)
-            stop 1
+            write(*,*) 'Не удалось прочесть аргумент '//str(index)//'. Индекс ошибки '//str(ios)
+            if (present(default)) arg = default
         endif
         write(*,*) 'Received "'//arg//'"'
     end subroutine
@@ -185,13 +186,15 @@ module my_io
     subroutine read_int1D(v, ios)
         integer, allocatable, intent(out) :: v(:)
         integer, intent(out) :: ios
-        integer, parameter :: nchar=100 ! максимальное количество символов в строке
-        character :: buffer(nchar), c
+        character :: buffer(str_max), c
         character(16) :: string
-        integer :: ncol, i, j, numbers(nchar)
+        integer :: ncol, i, j, numbers(str_max)
         logical :: lastisspace
-        numbers = 0; j = 1; ncol = 0; lastisspace=.true.
-        do i=1,nchar
+        numbers = 0
+        j = 1
+        ncol = 0
+        lastisspace=.true.
+        do i=1,str_max
             read(*, '(a)', advance='no', iostat=ios) c
             if (ios /= 0) then
                 write(string,*) buffer(j:i-1)
@@ -267,14 +270,16 @@ module my_io
     subroutine read_real1D(v, ios)
         real(mp), allocatable, intent(out) :: v(:)
         integer, intent(out) :: ios
-        integer, parameter :: nchar=100
-        character :: buffer(nchar), c
+        character :: buffer(str_max), c
         character(16) :: string
         integer :: ncol, i, j
-        real(mp) :: numbers(nchar)
+        real(mp) :: numbers(str_max)
         logical :: lastisspace
-        numbers = 0; j = 1; ncol = 0; lastisspace=.true.
-        do i=1,nchar
+        numbers = 0
+        j = 1
+        ncol = 0
+        lastisspace=.true.
+        do i=1,str_max
             read(*, '(a)', advance='no', iostat=ios) c
             if (ios /= 0) then
                 write(string,*) buffer(j:i-1)
@@ -364,7 +369,8 @@ module my_io
     subroutine output_int2D(text, a)
         character(*), intent(in) :: text
         integer, intent(in) :: a(:,:)
-        integer :: l, i, j, sz_x, len_text=1
+        integer :: l, i, j, sz_x, len_text
+        len_text = 1
         if (len(text) > 0) len_text = len(text)
         sz_x = size(a, dim=1)
         l = 0
@@ -404,24 +410,17 @@ module my_io
 
 
     ! Серия функций обработки строк, функционал близок к аналогам на языке Python
-    ! Источник: https://github.com/certik/fortran-utils/blob/master/src/utils.f90
+    ! Вдохновлено https://github.com/certik/fortran-utils/blob/master/src/utils.f90
 
-    pure logical function isspacesymbol(char) result(res) ! возвращает .true. на пробельные символы space (32) и tab (9)
+    pure elemental logical function isspacesymbol(char) ! возвращает .true. на пробельные символы space (32) и tab (9)
         character, intent(in) :: char
-        if (iachar(char) == 32 .or. iachar(char) == 9) then
-            res = .true.
-        else
-            res = .false.
-        end if
+        isspacesymbol = (iachar(char) == 32 .or. iachar(char) == 9)
     end function
     
-    pure logical function isspace(string) result(res) ! возвращает .true. если вся строка из пробельных символов
+    pure logical function isspace(string) ! возвращает .true. если вся строка из пробельных символов или пуста
         character(*), intent(in) :: string
         integer :: i
-        do i = 1, len(string)
-            if (.not. isspacesymbol(string(i:i))) exit
-        end do
-        res = (i>len(string))
+        isspace = all([(isspacesymbol(string(i:i)), i=1,len(string))])
     end function
 
     pure function lower(s) result(t) ! Возвращает строчку строчными латинскими символами

@@ -7,7 +7,7 @@ program quest3v1
     real(mp), allocatable :: a(:,:), b(:), x(:)
     character(:), allocatable :: mode
 
-    call read_argument(1, mode)
+    call read_argument(1, mode, default='mainch')
 
     open(1, file='data.dat', status='old')
         read(1,'(2x, i5)') n

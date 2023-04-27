@@ -16,23 +16,22 @@ module my_math
     function solve_sle(a0, b0, mode) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
         real(mp) :: a(size(b0)+1,size(b0)), x(size(b0))!, temp_row(size(b0)+1)
-        integer :: n
+        integer :: n, loc
         character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'gaussian' ! выбор по умолчанию
-        end if
-        write(*,*) 'Решение системы в режиме '//mode
+        write(*,*) 'Решение системы в режиме "'//mode//'"'
         n = size(b0) ! размер СЛУ
         a(:n,:) = a0
         a(n+1,:) = b0
         call output('k=0, a =', a)
         do k = 1,n ! Переход к треугольной матрице
+            if (mode == 'mainch') then
+                !call output('Ищем максимум среди ', a(:,k:))
+                loc = maxloc(abs( a(k,k:) / maxval(a(:,k:), dim=1) ), dim=1)
+                !write(*,*) loc
+            end if
             if (abs(a(k,k)) < 0.01) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
-            !if (mode == 'mainch') then
-            !end if
             a(k:,k) = a(k:,k) / a(k,k)
-            !a1(k:,k+1:) = reshape( [( a0(k:,j) - a1(k:,k) * a0(k,j), j=k+1,n )], shape(a1(k:,k+1:)) )
-            forall (j=k+1:n) a(k:,j) = a(k:,j) - a(k:,k) * a(k,j) ! вдохновлено разбором
+            forall (j=k+1:n) a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
             call output('k='//str(k)//', a =', a)
         end do
         if (mode == 'jordan') then
@@ -72,9 +71,6 @@ module my_math
         real(mp), external :: f
         real(mp) :: s, a, b, h
         character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'simpson' ! выбор по умолчанию
-        end if
         h = (b - a) / n
         if (mode == 'rectangle') then
             s = 0
@@ -88,7 +84,7 @@ module my_math
                 s = s + f(a+(i-1)*h)
             end do
             s = s * h
-        elseif (mode == 'simpson') then
+        elseif (mode == 'simpson' .or. .not. present(mode)) then ! выбор по умолчанию
             m = n
             if (mod(n, 2) == 1) then !s = ieee_value(s, ieee_quiet_nan); return
                 m = n + 1
