@@ -24,8 +24,6 @@ program quest4v1
         write(1,'(f0.'//str(dp)//')') x
     close(1)
 
-    write(*,*) 'Невязка:', sqrt(sum(multiply(a, x) - b)**2)
-
-    write(*,*) isdiagdominant(a)
+    write(*,*) 'Невязка:', dist(multiply(a, x), b)
     
 end program

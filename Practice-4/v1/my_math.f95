@@ -3,7 +3,7 @@ module my_math
     implicit none
 
     private
-    public solve_sle, polynomial_interp, integrate, multiply, isdiagdominant
+    public dist, solve_sle, polynomial_interp, integrate, multiply, isdiagdominant
     
     interface multiply
         module procedure multiply_1Dvar0, multiply_1Dvar1, multiply_1Dvar2, multiply_2D
@@ -13,9 +13,33 @@ module my_math
 
     contains
 
-    pure logical function isdiagdominant(a) ! возвращает .true. если у матрицы имеется диагональное преобладание
+    pure function dist(a, b) ! возвращает евклидову метрику
+        real(mp), intent(in) :: a(:), b(:)
+        real(mp) :: dist
+        dist = sqrt(sum(a - b)**2)
+    end function
+
+    pure logical function isdiagdominant(a) ! возвращает .true., если у матрицы имеется диагональное преобладание
         real(mp), intent(in) :: a(:,:)
         isdiagdominant = all([( ( 2*abs(a(j, j)) >= sum([(abs(a(i, j)), i=1,size(a, dim=1))]) ), j=1,size(a, dim=2) )])
+    end function
+
+    function solve_diagdominant_sle(a0, b0, mode) result(x1)
+        real(mp), intent(in) :: a0(:,:), b0(:)
+        real(mp) :: a(size(b0)+1,size(b0)), x0(size(b0)), x1(size(b0))
+        integer :: n
+        character(*), optional :: mode
+        write(*,*) 'Решение системы в режиме "'//mode//'"'
+        n = size(b0) ! размер СЛУ
+        a(:n,:) = a0
+        a(n+1,:) = b0
+        !call output('k=0, a =', a)
+        k = 0
+        do
+            k = k+1
+            call output('k='//str(k)//', a =', a)
+            if (dist(x0, x1) < 0.1) exit
+        end do
     end function
 
     function solve_sle(a0, b0, mode) result(x)

@@ -466,7 +466,7 @@ module my_io
         isspacesymbol = (iachar(char) == 32 .or. iachar(char) == 9)
     end function
     
-    pure logical function isspace(string) ! возвращает .true. если вся строка из пробельных символов или пуста
+    pure logical function isspace(string) ! возвращает .true., если вся строка из пробельных символов или пуста
         character(*), intent(in) :: string
         integer :: i
         isspace = all([(isspacesymbol(string(i:i)), i=1,len(string))])
