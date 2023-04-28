@@ -9,30 +9,32 @@ module my_math
         module procedure multiply_1Dvar0, multiply_1Dvar1, multiply_1Dvar2, multiply_2D
     end interface
 
-    integer, private :: i, j, k
+    integer :: i, j, k
 
     contains
 
     function solve_sle(a0, b0, mode) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
-        real(mp) :: a(size(b0)+1,size(b0)), x(size(b0))!, temp_row(size(b0)+1)
-        integer :: n, loc
+        real(mp) :: a(size(b0)+1,size(b0)), x(size(b0))
+        integer :: n, lead
         character(*), optional :: mode
         write(*,*) 'Решение системы в режиме "'//mode//'"'
         n = size(b0) ! размер СЛУ
         a(:n,:) = a0
         a(n+1,:) = b0
-        call output('k=0, a =', a)
-        do k = 1,n ! Переход к треугольной матрице
-            if (mode == 'mainch') then
-                !call output('Ищем максимум среди ', a(:,k:))
-                loc = maxloc(abs( a(k,k:) / maxval(a(:,k:), dim=1) ), dim=1)
-                !write(*,*) loc
+        !call output('k=0, a =', a)
+        do k = 1,n ! переход к треугольной матрице
+            if (mode == 'mainch') then ! выбор ведущего элемента
+                lead =  maxloc(abs(a(k,k:) / maxval(a(:,k:), dim=1)), dim=1) + k-1
+                if (lead /= k) then
+                    call swap(a(:,k), a(:,lead))
+                    write(*,*) 'Строка '//str(lead)//' теперь ведущая'
+                end if
             end if
-            if (abs(a(k,k)) < 0.01) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
+            if (abs(a(k,k)) < tiny(a(1,1))) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
             a(k:,k) = a(k:,k) / a(k,k)
             forall (j=k+1:n) a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
-            call output('k='//str(k)//', a =', a)
+            !call output('k='//str(k)//', a =', a)
         end do
         if (mode == 'jordan') then
             do j=n,1,-1

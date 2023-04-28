@@ -27,7 +27,7 @@ module my_io
     end interface
 
     interface output
-        module procedure output_int1D, output_int2D, output_real1D, output_real2D
+        module procedure output_int1D, output_int2D, output_real0D, output_real1D, output_real2D
     end interface
 
     contains
@@ -358,11 +358,21 @@ module my_io
     !                                               и переменную dp для количества знаков после запятой
     ! Пример использования: call output('array =', a)
 
+    subroutine output_int0D(text, a)
+        character(*), intent(in) :: text
+        integer, intent(in) :: a
+        write(*,'("'//text//'", 1x, i0)') a
+    end subroutine
+
     subroutine output_int1D(text, a)
         character(*), intent(in) :: text
         integer, intent(in) :: a(:)
-        write(*,'("'//text//'", (1x, i0)$)') a
-        write(*,*)
+        if (size(a) == 1) then
+            call output_int0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, i0)$)') a
+            write(*,*)
+        end if
     end subroutine
 
     subroutine output_int2D(text, a)
@@ -398,11 +408,21 @@ module my_io
         end if
     end subroutine
 
+    subroutine output_real0D(text, a)
+        character(*), intent(in) :: text
+        real(mp), intent(in) :: a
+        write(*,'("'//text//'", 1x, f0.'//str(dp)//')') a
+    end subroutine
+
     subroutine output_real1D(text, a)
         character(*), intent(in) :: text
         real(mp), intent(in) :: a(:)
-        write(*,'("'//text//'", (1x, f0.'//str(dp)//')$)') a
-        write(*,*)
+        if (size(a) == 1) then
+            call output_real0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, f0.'//str(dp)//')$)') a
+            write(*,*)
+        end if
     end subroutine
 
     subroutine output_real2D(text, a)
