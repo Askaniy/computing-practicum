@@ -7,6 +7,7 @@ program quest3v1
     real(mp), allocatable :: a(:,:), b(:), x(:)
     character(:), allocatable :: mode
 
+    ! Для модификации режима обработки надо вызывать make mode='jordan' или 'mainch'
     call read_argument(1, mode, default='mainch')
 
     open(1, file='data.dat', status='old')
@@ -14,12 +15,9 @@ program quest3v1
         allocate(a(n,n), b(n), x(n))
         read(1,*) a, b
     close(1)
-    !call output('A =', a)
-    !call output('B =', b)
 
     x = solve_sle(a, b, mode=mode)
-    call output('X =', x)
-    ! 1 2 2 0
+    call output('X =', x) ! 1 2 2 0
 
     open(1, file='result.dat')
         write(1,'("# ", i0)') n

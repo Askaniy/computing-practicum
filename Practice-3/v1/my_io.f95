@@ -2,7 +2,7 @@ module my_io
     implicit none
 
     private
-    public str, input, output, isspacesymbol, isspace, lower, upper, &
+    public str, input, output, isspacesymbol, isspace, lower, upper, tlen, &
         swap, read_argument, import_grid, import_matrix
 
     integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
@@ -85,7 +85,7 @@ module my_io
             write(*,*) 'Не удалось прочесть аргумент '//str(index)//'. Индекс ошибки '//str(ios)
             if (present(default)) arg = default
         endif
-        write(*,*) 'Received "'//arg//'"'
+        write(*,*) 'Получено "'//arg//'"'
     end subroutine
 
 
@@ -154,7 +154,7 @@ module my_io
             write(*,*) 'Ошибка при чтении строки. Индекс ошибки '//str(ios)
             stop 1
         endif
-        write(*,*) 'Received "'//v//'"'
+        write(*,*) 'Получено "'//v//'"'
     end subroutine
 
     subroutine input_int(text, v)
@@ -167,7 +167,7 @@ module my_io
             write(*,*) 'Ошибка при чтении целого числа. Индекс ошибки '//str(ios)
             stop 1
         endif
-        write(*,'("Received ", i0)') v
+        write(*,'("Получено ", i0)') v
     end subroutine
 
     subroutine input_real(text, v)
@@ -180,7 +180,7 @@ module my_io
             write(*,*) 'Ошибка при чтении вещ. числа. Индекс ошибки '//str(ios)
             stop 1
         endif
-        write(*,*) 'Received', v
+        write(*,*) 'Получено', v
     end subroutine
 
     subroutine read_int1D(v, ios)
@@ -230,7 +230,7 @@ module my_io
         integer :: ios
         write(*,'(a$)') text
         call read_int1D(v, ios)
-        call output_int1D('Received ', v)
+        call output_int1D('Получено', v)
     end subroutine
 
     subroutine read_int2D(v)
@@ -264,7 +264,7 @@ module my_io
         integer, allocatable, intent(out) :: v(:,:)
         write(*,'(a)') text
         call read_int2D(v)
-        call output_int2D('Received ', v)
+        call output_int2D('Получено', v)
     end subroutine
 
     subroutine read_real1D(v, ios)
@@ -315,7 +315,7 @@ module my_io
         integer :: ios
         write(*,'(a$)') text
         call read_real1D(v, ios)
-        call output_real1D("Received ", v)
+        call output_real1D('Получено', v)
     end subroutine
 
     subroutine read_real2D(v)
@@ -349,15 +349,14 @@ module my_io
         real(mp), allocatable, intent(out) :: v(:,:)
         write(*,'(a)') text
         call read_real2D(v)
-        call output_real2D("Received ", v)
+        call output_real2D('Получено', v)
     end subroutine
 
 
     ! Серия подпрограмм output. Реализует печать 1D/2D массивов и целыми и вещественными элементами
-    ! Не требует форматирования - использует информацию в массиве для определения размера
+    ! Не требует форматирования - использует информацию массива для определения размера
     !                                               и переменную dp для количества знаков после запятой
-    ! Отступ, соразмерный тексту, корректно работает только для латиницы
-    ! Пример использования: call output("array = ", a)
+    ! Пример использования: call output('array =', a)
 
     subroutine output_int1D(text, a)
         character(*), intent(in) :: text
@@ -369,19 +368,34 @@ module my_io
     subroutine output_int2D(text, a)
         character(*), intent(in) :: text
         integer, intent(in) :: a(:,:)
-        integer :: l, i, j, sz_x, len_text
-        len_text = 1
-        if (len(text) > 0) len_text = len(text)
+        integer :: sz_x, sz_y
         sz_x = size(a, dim=1)
-        l = 0
-        do i = 1,sz_x
-            do j = 1,size(a,2)
-                if (l < len(str(a(i,j)))) l = len(str(a(i,j)))
-            end do
-        end do
-        l = l + 1
-        write(*,'("'//text//'", '//str(sz_x)//'i'//str(l)//'/,&
-        &('//str(len_text)//'x, '//str(sz_x)//'i'//str(l)//'))') a
+        sz_y = size(a, dim=2)
+        if (sz_x == 1) then
+            call output_int1D(text, reshape(a, [sz_y]))
+        else if (sz_y == 1) then
+            call output_int1D(text, reshape(a, [sz_x]))
+        else
+            block
+                integer :: l, l_ij, i, j, len_text
+                len_text = tlen(text)
+                l = 0
+                do i = 1,sz_x
+                    do j = 1,size(a, dim=2)
+                        l_ij = len(str(a(i,j)))
+                        if (l < l_ij) l = l_ij
+                    end do
+                end do
+                l = l + 1
+                if (len_text == 0) then
+                    write(*,'('//str(sz_x)//'i'//str(l)//'/,&
+                            &('//str(sz_x)//'i'//str(l)//'))') a
+                else
+                    write(*,'("'//text//'", '//str(sz_x)//'i'//str(l)//'/,&
+                    &('//str(len_text)//'x, '//str(sz_x)//'i'//str(l)//'))') a
+                end if
+            end block
+        end if
     end subroutine
 
     subroutine output_real1D(text, a)
@@ -394,25 +408,41 @@ module my_io
     subroutine output_real2D(text, a)
         character(*), intent(in) :: text
         real(mp), intent(in) :: a(:,:)
-        integer :: l, i, j, sz_x, len_text=1
-        if (len(text) > 0) len_text = len(text)
+        integer :: sz_x, sz_y
         sz_x = size(a, dim=1)
-        l = 0
-        do i = 1,sz_x
-            do j = 1,size(a,2)
-                if (l < len(str(int(a(i,j))))) l = len(str(int(a(i,j))))
-            end do
-        end do
-        l = l + 2 + dp
-        write(*,'("'//text//'", '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'/,&
-        &('//str(len(text))//'x, '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'))') a
+        sz_y = size(a, dim=2)
+        if (sz_x == 1) then
+            call output_real1D(text, reshape(a, [sz_y]))
+        else if (sz_y == 1) then
+            call output_real1D(text, reshape(a, [sz_x]))
+        else
+            block
+                integer :: l, l_ij, i, j, len_text
+                len_text = tlen(text)
+                l = 0
+                do i = 1,sz_x
+                    do j = 1,sz_y
+                        l_ij = len(str(floor(a(i,j))))
+                        if (l < l_ij) l = l_ij
+                    end do
+                end do
+                l = l + 2 + dp
+                if (len_text == 0) then
+                    write(*,'('//str(sz_x)//'f'//str(l)//'.'//str(dp)//'/,&
+                            &('//str(sz_x)//'f'//str(l)//'.'//str(dp)//'))') a
+                else
+                    write(*,'("'//text//'", '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'/,&
+                    &('//str(len_text)//'x, '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'))') a
+                end if
+            end block
+        end if
     end subroutine
 
 
     ! Серия функций обработки строк, функционал близок к аналогам на языке Python
     ! Вдохновлено https://github.com/certik/fortran-utils/blob/master/src/utils.f90
 
-    pure elemental logical function isspacesymbol(char) ! возвращает .true. на пробельные символы space (32) и tab (9)
+    pure logical function isspacesymbol(char) ! возвращает .true. на пробельные символы space (32) и tab (9)
         character, intent(in) :: char
         isspacesymbol = (iachar(char) == 32 .or. iachar(char) == 9)
     end function
@@ -423,11 +453,22 @@ module my_io
         isspace = all([(isspacesymbol(string(i:i)), i=1,len(string))])
     end function
 
+    pure function tlen(string) result(sz) ! возвращает длину строки, считая непечатные байты за половину символа
+        character(*), intent(in) :: string
+        integer :: i, sz
+        sz = len(string) * 2
+        do i = 1,len(string)
+            if (ichar(string(i:i)) > 127) sz = sz - 1
+        end do
+        sz = sz / 2
+    end function
+
     pure function lower(s) result(t) ! Возвращает строчку строчными латинскими символами
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
-        t = s; diff = ichar('A')-ichar('a')
+        t = s
+        diff = ichar('A') - ichar('a')
         do i = 1,len(t)
             if (ichar(t(i:i)) >= ichar('A') .and. ichar(t(i:i)) <= ichar('Z')) then
                 t(i:i) = char(ichar(t(i:i)) - diff)
@@ -439,7 +480,8 @@ module my_io
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
-        t = s; diff = ichar('A')-ichar('a')
+        t = s
+        diff = ichar('A') - ichar('a')
         do i = 1,len(t)
             if (ichar(t(i:i)) >= ichar('a') .and. ichar(t(i:i)) <= ichar('z')) then
                 t(i:i) = char(ichar(t(i:i)) + diff)
@@ -447,4 +489,4 @@ module my_io
         end do
     end function
 
-end module my_io
+end module
