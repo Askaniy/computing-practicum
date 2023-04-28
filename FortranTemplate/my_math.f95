@@ -3,15 +3,23 @@ module my_math
     implicit none
 
     private
-    public solve_sle, polynomial_interp, integrate, multiply
+    public dist, solve_sle, polynomial_interp, integrate, multiply
     
     interface multiply
         module procedure multiply_1Dvar0, multiply_1Dvar1, multiply_1Dvar2, multiply_2D
     end interface
 
     integer :: i, j, k
+    real, parameter, private :: eps = 10.0_mp**(-dp)
 
     contains
+
+
+    pure function dist(a, b) ! возвращает евклидову метрику
+        real(mp), intent(in) :: a(:), b(:)
+        real(mp) :: dist
+        dist = sqrt(sum(a - b)**2)
+    end function
 
     function solve_sle(a0, b0, mode) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
@@ -31,7 +39,7 @@ module my_math
                     write(*,*) 'Строка '//str(lead)//' теперь ведущая'
                 end if
             end if
-            if (abs(a(k,k)) < tiny(a(1,1))) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
+            if (abs(a(k,k)) < eps) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
             a(k:,k) = a(k:,k) / a(k,k)
             forall (j=k+1:n) a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
             !call output('k='//str(k)//', a =', a)
@@ -115,7 +123,7 @@ module my_math
 
     function multiply_1Dvar0(a, b) result(c)
         real(mp), intent(in) :: a(:), b(:)
-        real(mp) :: c(size(b))
+        real(mp) :: c
         c = dot_product(a, b)
     end function
 
@@ -136,7 +144,7 @@ module my_math
         real(mp), allocatable :: c(:,:)
         character(*), optional :: mode
         if (.not. present(mode)) then
-            c = transpose(matmul(transpose(a), transpose(b)))
+            c = transpose(matmul(b, a))
         elseif (mode == 'tridiagonal') then ! не протестировано!
             c = tridiagonal(a, b)
         end if

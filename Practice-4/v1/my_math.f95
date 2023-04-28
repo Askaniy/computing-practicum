@@ -179,7 +179,7 @@ module my_math
 
     function multiply_1Dvar0(a, b) result(c)
         real(mp), intent(in) :: a(:), b(:)
-        real(mp) :: c(size(b))
+        real(mp) :: c
         c = dot_product(a, b)
     end function
 

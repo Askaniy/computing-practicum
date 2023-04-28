@@ -6,7 +6,7 @@ module my_io
         swap, read_argument, import_grid, import_matrix, tlen
 
     integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
-    integer, parameter, public :: dp = 5 ! "decimal places", число знаков после запятой в форматированном выводе
+    integer, parameter, public :: dp = 3 ! "decimal places", число знаков после запятой в форматированном выводе
 
     integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
@@ -466,7 +466,7 @@ module my_io
         isspacesymbol = (iachar(char) == 32 .or. iachar(char) == 9)
     end function
     
-    pure logical function isspace(string) ! возвращает .true. если вся строка из пробельных символов или пуста
+    pure logical function isspace(string) ! возвращает .true., если вся строка из пробельных символов или пуста
         character(*), intent(in) :: string
         integer :: i
         isspace = all([(isspacesymbol(string(i:i)), i=1,len(string))])
