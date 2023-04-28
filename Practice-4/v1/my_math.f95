@@ -26,29 +26,55 @@ module my_math
         isdiagdominant = all([( ( 2*abs(a(j, j)) >= sum([(abs(a(i, j)), i=1,size(a, dim=1))]) ), j=1,size(a, dim=2) )])
     end function
 
-    function solve_diagdominant_sle(a, b, mode) result(x1)
+    function solve_diagdominant_sle(a, b, mode) result(x)
         real(mp), intent(in) :: a(:,:), b(:)
-        real(mp) :: x0(size(b)), x1(size(b)), p_j(size(b))
+        real(mp) :: x(size(b))
         integer :: n
         character(*), optional :: mode
         write(*,*) 'Решение системы в режиме "'//mode//'"'
+        if (.not. isdiagdominant(a)) write(*,*) 'Матрица не имеет диагонального преобладания!'
         n = size(b) ! размер СЛУ
-        x0 = 1
         k = 0
-        do
-            k = k+1
-            if (mode == 'jacobi') then
-                x1 = [( (b(j) - dot_product(a(:, j), x0) + a(j,j)*x0(j))/a(j,j), j=1,n )]
-            else if (mode == 'seidel') then
+        if (mode == 'relax') then
+            block
+                real(mp) :: p(n,n), q(n), max_value
+                integer :: max_index
                 do j=1,n
-                    p_j = -a(:,j) / a(j,j)
-                    x1(j) = sum([(p_j(i)*x1(i), i=1,j-1)]) + sum([(p_j(i)*x0(i), i=j+1,n)]) + b(j)/a(j,j)
+                    p(:,j) = -a(:,j) / a(j,j)
                 end do
-                !call output('k='//str(k)//', x=', x1)
-            end if
-            if (dist(x0, x1) < eps) exit
-            x0 = x1
-        end do
+                q = b / [(a(j,j), j=1,n)] ! вектор невязок
+                x = 0 ! обязательно
+                do
+                    k = k+1
+                    max_index = maxloc(abs(q), dim=1)
+                    max_value = maxval(q)
+                    x(max_index) = x(max_index) + max_value
+                    !call output('k='//str(k)//', x=', x)
+                    do j=1,n
+                        q(j) = q(j) + p(max_index,j) * max_value
+                    end do
+                    if (k == 500) exit !(maxval(abs(q)) < eps) exit
+                end do
+            end block
+        else
+            block
+                real(mp) :: x0(n), p_j(n)
+                x0 = 1 ! произвольно
+                do
+                    k = k+1
+                    if (mode == 'jacobi') then
+                        x = [( (b(j) - dot_product(a(:, j), x0) + a(j,j)*x0(j))/a(j,j), j=1,n )]
+                    else if (mode == 'seidel') then
+                        do j=1,n
+                            p_j = -a(:,j) / a(j,j)
+                            x(j) = sum([(p_j(i)*x(i), i=1,j-1)]) + sum([(p_j(i)*x0(i), i=j+1,n)]) + b(j)/a(j,j)
+                        end do
+                    end if
+                    if (dist(x0, x) < eps) exit
+                    x0 = x
+                end do
+            end block
+        end if
     end function
 
     function solve_sle(a0, b0, mode) result(x)

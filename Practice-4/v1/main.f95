@@ -8,7 +8,7 @@ program quest4v1
     character(:), allocatable :: mode
 
     ! Для модификации режима обработки надо вызывать make mode='jacobi', 'seidel' или 'relax'
-    call read_argument(1, mode, default='seidel')
+    call read_argument(1, mode, default='relax')
 
     open(1, file='data.dat', status='old')
         read(1,'(2x, i5)') n
