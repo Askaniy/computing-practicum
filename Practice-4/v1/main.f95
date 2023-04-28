@@ -16,8 +16,10 @@ program quest4v1
         read(1,*) a, b
     close(1)
 
-    x = solve_sle(a, b, mode=mode)
-    call output('X =', x) ! 1 2 2 0
+    x = solve_sle(a, b)
+    call output('Гаусс:', x)
+    x = solve_diagdominant_sle(a, b, mode=mode)
+    call output('Итеративно:', x)
 
     open(1, file='result.dat')
         write(1,'("# ", i0)') n

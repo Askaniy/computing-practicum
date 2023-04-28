@@ -3,13 +3,14 @@ module my_math
     implicit none
 
     private
-    public dist, solve_sle, polynomial_interp, integrate, multiply, isdiagdominant
+    public dist, solve_sle, solve_diagdominant_sle, polynomial_interp, integrate, multiply, isdiagdominant
     
     interface multiply
         module procedure multiply_1Dvar0, multiply_1Dvar1, multiply_1Dvar2, multiply_2D
     end interface
 
     integer :: i, j, k
+    real, parameter, private :: eps = 10.0_mp**(-dp)
 
     contains
 
@@ -24,21 +25,21 @@ module my_math
         isdiagdominant = all([( ( 2*abs(a(j, j)) >= sum([(abs(a(i, j)), i=1,size(a, dim=1))]) ), j=1,size(a, dim=2) )])
     end function
 
-    function solve_diagdominant_sle(a0, b0, mode) result(x1)
-        real(mp), intent(in) :: a0(:,:), b0(:)
-        real(mp) :: a(size(b0)+1,size(b0)), x0(size(b0)), x1(size(b0))
+    function solve_diagdominant_sle(a, b, mode) result(x1)
+        real(mp), intent(in) :: a(:,:), b(:)
+        real(mp) :: x0(size(b)), x1(size(b))
         integer :: n
         character(*), optional :: mode
         write(*,*) 'Решение системы в режиме "'//mode//'"'
-        n = size(b0) ! размер СЛУ
-        a(:n,:) = a0
-        a(n+1,:) = b0
-        !call output('k=0, a =', a)
+        n = size(b) ! размер СЛУ
         k = 0
+        x0 = 1
+        write(*,*) eps
         do
             k = k+1
-            call output('k='//str(k)//', a =', a)
-            if (dist(x0, x1) < 0.1) exit
+            x1 = [( (b(j) - dot_product(a(:, j), x0) + a(j,j)*x0(j))/a(j,j), j=1,n )]
+            if (dist(x0, x1) < eps) exit
+            x0 = x1
         end do
     end function
 
@@ -60,7 +61,7 @@ module my_math
                     write(*,*) 'Строка '//str(lead)//' теперь ведущая'
                 end if
             end if
-            if (abs(a(k,k)) < tiny(a(1,1))) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
+            if (abs(a(k,k)) < eps) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
             a(k:,k) = a(k:,k) / a(k,k)
             forall (j=k+1:n) a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
             !call output('k='//str(k)//', a =', a)
