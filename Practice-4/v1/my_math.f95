@@ -3,7 +3,7 @@ module my_math
     implicit none
 
     private
-    public solve_sle, polynomial_interp, integrate, multiply
+    public solve_sle, polynomial_interp, integrate, multiply, isdiagdominant
     
     interface multiply
         module procedure multiply_1Dvar0, multiply_1Dvar1, multiply_1Dvar2, multiply_2D
@@ -12,6 +12,11 @@ module my_math
     integer :: i, j, k
 
     contains
+
+    pure logical function isdiagdominant(a) ! возвращает .true. если у матрицы имеется диагональное преобладание
+        real(mp), intent(in) :: a(:,:)
+        isdiagdominant = all([( ( 2*abs(a(j, j)) >= sum([(abs(a(i, j)), i=1,size(a, dim=1))]) ), j=1,size(a, dim=2) )])
+    end function
 
     function solve_sle(a0, b0, mode) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
@@ -136,34 +141,30 @@ module my_math
         real(mp), allocatable :: c(:,:)
         character(*), optional :: mode
         if (.not. present(mode)) then
-            c = transpose(matmul(transpose(a), transpose(b)))
+            c = transpose(matmul(b, a))
         elseif (mode == 'tridiagonal') then ! не протестировано!
-            c = tridiagonal(a, b)
+            block
+                integer :: m
+                m = size(a, dim=2)
+                allocate(c(5, m))
+                c = 0
+                c(1:2, 1) = 0 ! NaN
+                c(3, 1) = a(2, 1) * b(2, 1) + a(3, 1) * b(1, 2)
+                c(4, 1) = a(2, 1) * b(3, 1) + a(3, 1) * b(2, 2)
+                c(5, 1) = a(3, 1) * b(3, 2)
+                do j=2,m-1
+                    c(1, j) = a(1, j) * b(1, j-1)
+                    c(2, j) = a(1, j) * b(2, j-1) + a(2, j) * b(1, j)
+                    c(3, j) = a(1, j) * b(3, j-1) + a(2, j) * b(2, j) + a(3, j) * b(1, j+1)
+                    c(4, j) = a(2, j) * b(3, j) + a(3, j) * b(2, j+1)
+                    c(5, j) = a(3, j) * b(3, j+1)
+                end do
+                c(1, m) = a(1, m) * b(1, m-1)
+                c(2, m) = a(1, m) * b(2, m-1) + a(2, m) * b(1, m)
+                c(3, m) = a(1, m) * b(3, m-1) + a(2, m) * b(2, m)
+                c(4:5, m) = 0 ! NaN
+            end block
         end if
-    end function
-
-    function tridiagonal(a, b) result(c)
-        integer :: m
-        real(mp), intent(in) :: a(:,:), b(:,:)
-        real(mp), allocatable :: c(:,:)
-        m = size(a, dim=2)
-        allocate(c(5, m))
-        c = 0
-        c(1:2, 1) = 0 ! NaN
-        c(3, 1) = a(2, 1) * b(2, 1) + a(3, 1) * b(1, 2)
-        c(4, 1) = a(2, 1) * b(3, 1) + a(3, 1) * b(2, 2)
-        c(5, 1) = a(3, 1) * b(3, 2)
-        do j=2,m-1
-            c(1, j) = a(1, j) * b(1, j-1)
-            c(2, j) = a(1, j) * b(2, j-1) + a(2, j) * b(1, j)
-            c(3, j) = a(1, j) * b(3, j-1) + a(2, j) * b(2, j) + a(3, j) * b(1, j+1)
-            c(4, j) = a(2, j) * b(3, j) + a(3, j) * b(2, j+1)
-            c(5, j) = a(3, j) * b(3, j+1)
-        end do
-        c(1, m) = a(1, m) * b(1, m-1)
-        c(2, m) = a(1, m) * b(2, m-1) + a(2, m) * b(1, m)
-        c(3, m) = a(1, m) * b(3, m-1) + a(2, m) * b(2, m)
-        c(4:5, m) = 0 ! NaN
     end function
 
 end module
