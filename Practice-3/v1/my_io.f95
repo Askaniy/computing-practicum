@@ -2,8 +2,8 @@ module my_io
     implicit none
 
     private
-    public str, input, output, isspacesymbol, isspace, lower, upper, tlen, &
-        swap, read_argument, import_grid, import_matrix
+    public str, input, output, isspacesymbol, isspace, lower, upper, &
+        swap, read_argument, import_grid, import_matrix, tlen
 
     integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
     integer, parameter, public :: dp = 5 ! "decimal places", число знаков после запятой в форматированном выводе
@@ -22,12 +22,11 @@ module my_io
     end interface
 
     interface input
-        module procedure input_char, input_int, input_real, &
-            input_int1D, input_int2D, input_real1D, input_real2D
+        module procedure input_char, input_int, input_real, input_int1D, input_int2D, input_real1D, input_real2D
     end interface
 
     interface output
-        module procedure output_int1D, output_int2D, output_real0D, output_real1D, output_real2D
+        module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D
     end interface
 
     contains
