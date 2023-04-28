@@ -14,6 +14,7 @@ module my_math
 
     contains
 
+
     pure function dist(a, b) ! возвращает евклидову метрику
         real(mp), intent(in) :: a(:), b(:)
         real(mp) :: dist
@@ -27,17 +28,24 @@ module my_math
 
     function solve_diagdominant_sle(a, b, mode) result(x1)
         real(mp), intent(in) :: a(:,:), b(:)
-        real(mp) :: x0(size(b)), x1(size(b))
+        real(mp) :: x0(size(b)), x1(size(b)), p_j(size(b))
         integer :: n
         character(*), optional :: mode
         write(*,*) 'Решение системы в режиме "'//mode//'"'
         n = size(b) ! размер СЛУ
-        k = 0
         x0 = 1
-        write(*,*) eps
+        k = 0
         do
             k = k+1
-            x1 = [( (b(j) - dot_product(a(:, j), x0) + a(j,j)*x0(j))/a(j,j), j=1,n )]
+            if (mode == 'jacobi') then
+                x1 = [( (b(j) - dot_product(a(:, j), x0) + a(j,j)*x0(j))/a(j,j), j=1,n )]
+            else if (mode == 'seidel') then
+                do j=1,n
+                    p_j = -a(:,j) / a(j,j)
+                    x1(j) = sum([(p_j(i)*x1(i), i=1,j-1)]) + sum([(p_j(i)*x0(i), i=j+1,n)]) + b(j)/a(j,j)
+                end do
+                !call output('k='//str(k)//', x=', x1)
+            end if
             if (dist(x0, x1) < eps) exit
             x0 = x1
         end do
