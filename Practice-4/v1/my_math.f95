@@ -47,13 +47,10 @@ module my_math
                 do
                     k = k+1
                     max_index = maxloc(abs(q), dim=1)
-                    max_value = maxval(q)
+                    max_value = q(max_index)
                     x(max_index) = x(max_index) + max_value
-                    !call output('k='//str(k)//', x=', x)
-                    do j=1,n
-                        q(j) = q(j) + p(max_index,j) * max_value
-                    end do
-                    if (k == 500) exit !(maxval(abs(q)) < eps) exit
+                    q = q + p(max_index,:) * max_value
+                    if (maxval(abs(q)) < eps) exit
                 end do
             end block
         else
