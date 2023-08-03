@@ -64,9 +64,21 @@ module my_io
             elseif (mode == 'tridiagonal') then
                 allocate(array(3, n))
                 array = 0
-                read(1,*) (array(i, 1), i=2,3) ! первые два элемента со сдвигом
-                read(1,*) array(i, j)
-                read(1,*) (array(i, n), i=1,2) ! последние два тоже
+                read(1,*) (array(i, 1), i=2,3) ! первая строчка диагонали вылезает за пределы матрицы на один элемент
+                do j = 2,n-1
+                    read(1,*) array(:, j)
+                end do
+                read(1,*) (array(i, n), i=1,2) ! последняя - тоже
+            elseif (mode == 'pentadiagonal') then
+                allocate(array(5, n))
+                array = 0
+                read(1,*) (array(i, 1), i=3,5) ! первая строчка диагонали вылезает за пределы матрицы на два элемента
+                read(1,*) (array(i, 2), i=2,5) ! вторая - на один
+                do j = 3,n-2
+                    read(1,*) array(:, j)
+                end do
+                read(1,*) (array(i, n-1), i=1,4) ! предпоследняя - тоже на один
+                read(1,*) (array(i, n), i=1,3) ! последняя - снова на два
             end if
         close(1)
     end function
