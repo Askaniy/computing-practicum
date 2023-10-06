@@ -120,11 +120,36 @@ module my_math
         end if
     end function
 
-    !function solve_pentadiagdominant_sle(a, b) result(x)
-    !    real(mp), intent(in) :: a(:,:), b(:)
-    !    real(mp) :: x(size(b))
-    !    integer :: n
-    !end function
+    function solve_pentadiagdominant_sle(aa, d) result(x)
+        real(mp), intent(in) :: aa(:,:), d(:)
+        real(mp) :: x(size(d)), a(-1:size(d)), b(-1:size(d)), c(-1:size(d)), &
+                    alpha, beta, p(-1:size(d)), q(-1:size(d)), r(-1:size(d))
+        integer :: n
+        n = size(d) ! размер пятидиагональной симметричной СЛУ с диагональным преобладанием
+        a = 0
+        b = 0
+        c = 0
+        a(1:) = aa(1,:) ! переобозначение колонок по условию
+        b(1:) = aa(2,:) !     и расширение первых двух элементов нулями
+        c(1:) = aa(3,:) !     для обращений по i-2 и i-1
+        p = 0
+        q = 0
+        r = 0
+        ! Прямой ход
+        do i = 1,n
+            beta = b(i-1) - p(i-2) * c(i-2)
+            alpha = a(i-1) - p(i-1) * beta - q(i-2) * c(i-2)
+            p(i) = (b(i) - q(i-1) * beta) / alpha
+            q(i) = c(i) / alpha
+            r(i) = (d(i) - r(i-1) * beta - r(i-2) * c(i-2)) / alpha
+        end do
+        ! Обратный ход
+        x(n) = r(n)
+        x(n-1) = r(n-1) - p(n-1) * x(n)
+        do i = n-2,1,-1
+            x(i) = r(i) - p(i) * x(i+1) - q(i) * x(i+2)
+        end do
+    end function
 
     function polynomial_interp(grid, q, a, b) result(interpolated)
         integer, intent(in) :: q ! число разбиений интервала
