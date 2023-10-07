@@ -10,7 +10,8 @@ program quest5v2
     integer :: i, j, m
     real(mp), allocatable :: a(:,:), b(:), c(:)
 
-    a = import_matrix('data1.dat', 'square')
+    !a = import_matrix('data1.dat', 'square')
+    a = import_matrix('data1.dat', 'pentadiagonal')
     call output('a =', a)
 
     b = import_vector('data2.dat')
@@ -18,10 +19,10 @@ program quest5v2
 
     m = size(a, dim=2)
 
-    c = solve_diagdominant_sle(a, b, 'relax')
-    call output("c =", c)
+    !c = solve_diagdominant_sle(a, b, 'relax')
+    !call output('c =', c)
 
-    !c = solve_pentadiagdominant_sle(a, b)
-    !call output("c =", c)
+    c = solve_pentadiagdominant_sle(a, b)
+    call output('c =', c)
     
 end program

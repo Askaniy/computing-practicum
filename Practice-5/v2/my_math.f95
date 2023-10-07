@@ -26,12 +26,15 @@ module my_math
         isdiagdominant = all([( ( 2*abs(a(j,j)) >= sum(abs(a(:,j))) ), j=1,size(a, dim=2) )])
     end function
 
+    ! Задание 3: решение СЛУ методом Гаусса
     function solve_sle(a0, b0, mode) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
         real(mp) :: a(size(b0)+1,size(b0)), x(size(b0))
         integer :: n, lead
         character(*), optional :: mode
-        write(*,*) 'Решение системы в режиме "'//mode//'"'
+        if (.not. present(mode)) then
+            mode = 'mainch'
+        end if
         n = size(b0) ! размер СЛУ
         a(:n,:) = a0
         a(n+1,:) = b0
@@ -64,15 +67,18 @@ module my_math
         end if
     end function
 
+    ! Задание 4: решение СЛУ с диагональным преобладанием итерационными методами
     function solve_diagdominant_sle(a, b, mode) result(x)
         real(mp), intent(in) :: a(:,:), b(:)
         real(mp) :: x(size(b))
         integer :: n
         character(*), optional :: mode
-        write(*,*) 'Решение системы в режиме "'//mode//'"'
+        if (.not. present(mode)) then
+            mode = 'relax'
+        end if
         if (.not. isdiagdominant(a)) stop 'Матрица не имеет диагонального преобладания!'
         n = size(b) ! размер СЛУ
-        if (mode == 'jacobi') then ! Итерационный метод Якоби решения СЛУ
+        if (mode == 'jacobi') then ! метод Якоби
             block
                 real(mp) :: x0(n), g(n), d_z(n,n), d_rev(n,n)
                 x0 = b ! произвольно
@@ -90,7 +96,7 @@ module my_math
                     x0 = x
                 end do
             end block
-        else if (mode == 'seidel') then ! Итерационный метод Зейделя решения СЛУ
+        else if (mode == 'seidel') then ! метод Зейделя
             block
                 real(mp) :: x0(n), p_j(n)
                 x0 = b ! произвольно
@@ -103,7 +109,7 @@ module my_math
                     x0 = x
                 end do
             end block
-        else if (mode == 'relax') then ! Итерационный метод релаксации решения СЛУ
+        else if (mode == 'relax') then ! метод релаксации
             block
                 real(mp) :: p(n,n), q(n)
                 integer :: max_index
@@ -122,25 +128,27 @@ module my_math
         end if
     end function
 
+    ! Задание 5: решение СЛУ методом пятиточечной прогонки
+    ! Принимает пятидиагональную матрицу a0 в компактном виде, из пяти колонок
     function solve_pentadiagdominant_sle(a0, b0) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
         real(mp) :: x(size(b0)), a(-1:size(b0)), b(-1:size(b0)), c(-1:size(b0)), &
                     alpha, beta, p(-1:size(b0)), q(-1:size(b0)), r(-1:size(b0))
         integer :: n
-        n = size(b0) ! размер пятидиагональной симметричной СЛУ с диагональным преобладанием
+        n = size(b0) ! размер СЛУ
         a = 0
         b = 0
         c = 0
-        a(1:) = a0(1,:) ! переобозначение колонок по условию
-        b(1:) = a0(2,:) !     и расширение первых двух элементов нулями
-        c(1:) = a0(3,:) !     для обращений по i-2 и i-1
+        a(1:) = a0(3,:) ! переобозначение колонок по условию задания
+        b(1:) = a0(4,:) !     и расширение первых двух элементов нулями
+        c(1:) = a0(5,:) !     для обращений по i-2 и i-1
         p = 0
         q = 0
         r = 0
         ! Прямой ход
         do i = 1,n
             beta = b(i-1) - p(i-2) * c(i-2)
-            alpha = a(i-1) - p(i-1) * beta - q(i-2) * c(i-2)
+            alpha = a(i) - p(i-1) * beta - q(i-2) * c(i-2)
             p(i) = (b(i) - q(i-1) * beta) / alpha
             q(i) = c(i) / alpha
             r(i) = (b0(i) - r(i-1) * beta - r(i-2) * c(i-2)) / alpha
@@ -177,6 +185,9 @@ module my_math
         real(mp), external :: f
         real(mp) :: s, a, b, h
         character(*), optional :: mode
+        if (.not. present(mode)) then
+            mode = 'simpson'
+        end if
         h = (b - a) / n
         if (mode == 'rectangle') then
             s = 0
@@ -190,7 +201,7 @@ module my_math
                 s = s + f(a+(i-1)*h)
             end do
             s = s * h
-        elseif (mode == 'simpson' .or. .not. present(mode)) then ! выбор по умолчанию
+        elseif (mode == 'simpson') then
             m = n
             if (mod(n, 2) == 1) then !s = ieee_value(s, ieee_quiet_nan); return
                 m = n + 1
@@ -259,7 +270,7 @@ module my_math
             c(1, m) = a(1, m) * b(1, m-1)
             c(2, m) = a(1, m) * b(2, m-1) + a(2, m) * b(1, m)
             c(3, m) = a(1, m) * b(3, m-1) + a(2, m) * b(2, m)
-        elseif (mode == 'pentadiagonal') then
+        elseif (mode == 'pentadiagonal') then ! работает некорректно
             allocate(c(-4:4, 1:m))
             c = 0
             block
@@ -269,7 +280,7 @@ module my_math
                 bb = 0
                 bb(-2:2, 1:m) = b
                 do concurrent (i=-4:4, j=1:m)
-                    c(i, j) = dot_product(aa(i-6:i+6, j), [(bb(i+6-k, j-6+k), k=0,12)])
+                    c(i,j) = dot_product(aa(i-6:i+6, j), [(bb(i+6-k, j-6+k), k=0,12)])
                 end do
             end block
         end if
