@@ -3,7 +3,7 @@ module my_math
     implicit none
 
     private
-    public dist, solve_sle, solve_diagdominant_sle, polynomial_interp, integrate, multiply, isdiagdominant
+    public dist, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, polynomial_interp, integrate, multiply, isdiagdominant
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -46,17 +46,19 @@ module my_math
             end if
             if (abs(a(k,k)) < eps) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
             a(k:,k) = a(k:,k) / a(k,k)
-            forall (j=k+1:n) a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
+            do concurrent (j=k+1:n)
+                a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
+            end do
             !call output('k='//str(k)//', a =', a)
         end do
         if (mode == 'jordan') then
-            do j=n,1,-1
+            do concurrent (j=n:1:-1)
                 a(n+1,1:j-1) = a(n+1,1:j-1) - a(j,1:j-1) * a(n+1,j)
             end do
             x = a(n+1, :)
         else ! схема с Гауссом или выбором
             x(n) = a(n+1,n)
-            do j=n-1,1,-1
+            do concurrent (j=n-1:1:-1)
                 x(j) = a(n+1,j) - dot_product(a(j+1:n,j), x(j+1:n))
             end do
         end if
@@ -68,7 +70,7 @@ module my_math
         integer :: n
         character(*), optional :: mode
         write(*,*) 'Решение системы в режиме "'//mode//'"'
-        if (.not. isdiagdominant(a)) write(*,*) 'Матрица не имеет диагонального преобладания!'
+        if (.not. isdiagdominant(a)) stop 'Матрица не имеет диагонального преобладания!'
         n = size(b) ! размер СЛУ
         if (mode == 'jacobi') then ! Итерационный метод Якоби решения СЛУ
             block
@@ -76,7 +78,7 @@ module my_math
                 x0 = b ! произвольно
                 d_z = 0 ! матрица для хранения D и Z, сначала D (диагональ A)
                 d_rev = 0 ! матрица для хранения D^(-1)
-                do j=1,n
+                do concurrent (j=1:n)
                     d_z(j,j) = a(j,j)
                     d_rev(j,j) = 1.0 / a(j,j)
                 end do
@@ -120,18 +122,18 @@ module my_math
         end if
     end function
 
-    function solve_pentadiagdominant_sle(aa, d) result(x)
-        real(mp), intent(in) :: aa(:,:), d(:)
-        real(mp) :: x(size(d)), a(-1:size(d)), b(-1:size(d)), c(-1:size(d)), &
-                    alpha, beta, p(-1:size(d)), q(-1:size(d)), r(-1:size(d))
+    function solve_pentadiagdominant_sle(a0, b0) result(x)
+        real(mp), intent(in) :: a0(:,:), b0(:)
+        real(mp) :: x(size(b0)), a(-1:size(b0)), b(-1:size(b0)), c(-1:size(b0)), &
+                    alpha, beta, p(-1:size(b0)), q(-1:size(b0)), r(-1:size(b0))
         integer :: n
-        n = size(d) ! размер пятидиагональной симметричной СЛУ с диагональным преобладанием
+        n = size(b0) ! размер пятидиагональной симметричной СЛУ с диагональным преобладанием
         a = 0
         b = 0
         c = 0
-        a(1:) = aa(1,:) ! переобозначение колонок по условию
-        b(1:) = aa(2,:) !     и расширение первых двух элементов нулями
-        c(1:) = aa(3,:) !     для обращений по i-2 и i-1
+        a(1:) = a0(1,:) ! переобозначение колонок по условию
+        b(1:) = a0(2,:) !     и расширение первых двух элементов нулями
+        c(1:) = a0(3,:) !     для обращений по i-2 и i-1
         p = 0
         q = 0
         r = 0
@@ -141,7 +143,7 @@ module my_math
             alpha = a(i-1) - p(i-1) * beta - q(i-2) * c(i-2)
             p(i) = (b(i) - q(i-1) * beta) / alpha
             q(i) = c(i) / alpha
-            r(i) = (d(i) - r(i-1) * beta - r(i-2) * c(i-2)) / alpha
+            r(i) = (b0(i) - r(i-1) * beta - r(i-2) * c(i-2)) / alpha
         end do
         ! Обратный ход
         x(n) = r(n)
@@ -266,9 +268,9 @@ module my_math
                 aa(-2:2, 1:m) = a
                 bb = 0
                 bb(-2:2, 1:m) = b
-                forall (i=-4:4, j=1:m)
+                do concurrent (i=-4:4, j=1:m)
                     c(i, j) = dot_product(aa(i-6:i+6, j), [(bb(i+6-k, j-6+k), k=0,12)])
-                end forall
+                end do
             end block
         end if
     end function

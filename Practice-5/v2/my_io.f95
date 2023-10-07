@@ -3,7 +3,7 @@ module my_io
 
     private
     public str, input, output, isspacesymbol, isspace, lower, upper, &
-        swap, read_argument, import_grid, import_matrix, tlen
+        swap, read_argument, import_grid, import_vector, import_matrix, tlen
 
     integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
     integer, parameter, public :: dp = 3 ! "decimal places", число знаков после запятой в форматированном выводе
@@ -52,16 +52,26 @@ module my_io
         close(1)
     end subroutine
 
+    ! Специализированное чтение вектора, у которого указан размер
+    function import_vector(path) result(array)
+        integer :: n
+        real(mp), allocatable :: array(:)
+        character(*) :: path
+        open(1, file=path, status='old')
+            read(1,'(2x, i5)') n ! размер матрицы задаётся с третьего символа первой строки
+            allocate(array(n))
+            read(1,*) array
+        close(1)
+    end function
+
+    ! Специализированное чтение матрицы, у которой указан размер
     function import_matrix(path, mode) result(array)
         integer :: i, j, n
         real(mp), allocatable :: array(:,:)
         character(*) :: path, mode
         open(1, file=path, status='old')
             read(1,'(2x, i5)') n ! размер матрицы задаётся с третьего символа первой строки
-            if (mode == 'vector') then
-                allocate(array(1, n))
-                read(1,*) array
-            elseif (mode == 'square') then
+            if (mode == 'square') then
                 allocate(array(n, n))
                 read(1,*) array
             elseif (mode == 'tridiagonal') then
@@ -103,7 +113,7 @@ module my_io
     end subroutine
 
 
-    ! Серия подпрограмм swap. Переставляет что угодно. Своровано у Кати
+    ! Серия подпрограмм swap. Переставляет что угодно
     ! Пример использования: call swap(matrix(j,:), matrix(k,:))
 
     elemental subroutine swap_int(a, b)
