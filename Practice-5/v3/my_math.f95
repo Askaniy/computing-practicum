@@ -3,7 +3,8 @@ module my_math
     implicit none
 
     private
-    public dist, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, polynomial_interp, integrate, multiply, isdiagdominant
+    public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
+    polynomial_interp, spline_approx, integrate, multiply
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -161,6 +162,7 @@ module my_math
         end do
     end function
 
+    ! Задание 2: интерполирование полиномами
     function polynomial_interp(grid, q, a, b) result(interpolated)
         integer, intent(in) :: q ! число разбиений интервала
         integer :: n, m
@@ -174,6 +176,54 @@ module my_math
                                     (interpolated(1,j) - grid(1,:)) / (grid(1,k) - grid(1,:)), &
                                     mask = grid(1,k)/=grid(1,:)), k=0,n)]), &
                             j=0,m)]
+    end function
+
+    ! Задание 5: аппроксимация сплайнами
+    function spline_approx(XYP, q) result(approximated)
+        integer, intent(in) :: q ! число разбиений интервала
+        integer :: n, m
+        real(mp), intent(in) :: XYP(:, 0:) ! начальная сетка в виде колонок X, Y, P
+        real(mp) :: approximated(2, 0:(size(XYP, dim=2)-1)*q), & ! результат в виде X, Y
+                    a(-1:1, size(XYP, dim=2)), b(-1:1, size(XYP, dim=2)), qbt(-1:1, size(XYP, dim=2)), & ! размера n+1
+                    x(0:size(XYP, dim=2)-1), aa(-2:2, size(XYP, dim=2)), &
+                    s(size(XYP, dim=2)), r(size(XYP, dim=2))
+        n = size(XYP, dim=2) - 1
+        m = size(approximated, dim=2) - 1 ! число интервалов
+        x = XYP(1,:) ! дублирование колонки иксов для синтаксической простоты
+        a = 0
+        a(0,1) = 2*x(1) - 2*x(0) ! 2 за скобку не выношу, т.к. "вычитать почти равные числа - плохо"
+        a(0,2) = 2*x(2) - 2*x(0)
+        a(1,2) = x(2) - x(1)
+        a(-1,n) = x(n-1) - x(n-2)
+        a(0,n) = 2*x(n) - 2*x(n-2)
+        a(0,n+1) = 2*x(n) - 2*x(n-1)
+        b = 0
+        b(-1,2) = 1/(x(1) - x(0))  ! предрасчитываю вручную первые и последние две строки, а не расширяю нулями, т.к.
+        b(1,2) = 1/a(1,2)          ! 1) эти матрицы потом перемножаются, менять их размеры не удобно
+        b(0,2) = -b(-1,1) - b(1,1) ! 2) для матрицы A другого варианта нет
+        b(-1,n) = 1/a(-1,n)
+        b(1,n) = 1/(x(n) - x(n-1))
+        b(0,n) = -b(-1,n) - b(1,n)
+        do concurrent (i=3:n-1) ! быстрее за счёт распараллеливания, но больше вычислений, чем если итеративно
+            a(-1,i) = x(i-1) - x(i-2)
+            a(1, i) = x(i) - x(i-1)
+            a(0, i) = 2*x(i) - 2*x(i-2)
+            b(-1,i) = 1/a(-1,i)
+            b(1, i) = 1/a(1,i)
+            b(0, i) = -b(-1,i) - b(1,i)
+        end do
+        qbt = 0
+        do concurrent (i=2:n) ! одновременное транспонирование B и умножение на Q: тогда будет 3-диг. матрица, а не 5-диг.
+            qbt(-1,i+1) = b(-1,i) / XYP(3,i)
+            qbt(0,i) = b(0,i) / XYP(3,i-1)
+            qbt(1,i-1) = b(1,i) / XYP(3,i-2)
+        end do
+        aa = 6 * multiply(b, qbt, 'tridiagonal')
+        aa(-1:1,:) = aa(-1:1,:) + a ! правая часть СЛУ
+        s = solve_pentadiagdominant_sle(aa, 6 * multiply(b, XYP(2,:), 'tridiagonal'))
+        r = XYP(2,:) - multiply(qbt, s, 'tridiagonal') ! вектор результатов R = Y - Q B^T S
+        call output('r =', r)
+        approximated = 0
     end function
 
 
@@ -240,10 +290,22 @@ module my_math
         c = matmul(a, transpose(b))
     end function
 
-    function multiply_2D_1D(a, b) result(c)
+    function multiply_2D_1D(a, b, mode) result(c)
         real(mp), intent(in) :: a(:,:), b(:)
         real(mp) :: c(size(b))
-        c = matmul(transpose(a), b)
+        character(*), optional :: mode
+        if (.not. present(mode)) then
+            c = matmul(transpose(a), b)
+        elseif (mode == 'tridiagonal') then
+            block
+                real(mp) :: bb(0:size(b)+1)
+                bb = 0
+                bb(1:size(b)) = b ! расширение в обе стороны нулями
+                do concurrent (j=1:size(b))
+                    c(j) = dot_product(a(:,j), bb(j-1:j+1))
+                end do
+            end block
+        end if
     end function
 
     function multiply_2D_2D(a, b, mode) result(c)

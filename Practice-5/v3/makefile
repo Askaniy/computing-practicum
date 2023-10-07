@@ -1,7 +1,5 @@
 name := main
 comp := gfortran
-debug_options := -fcheck=all
-optim_options := -Ofast
 opt := -ffree-line-length-none
 ext := f95
 mode = 
@@ -9,11 +7,11 @@ mode =
 files := $(wildcard *.$(ext))
 obj := $(patsubst %.$(ext), %.o, $(files))
 
-optimize: opt += $(optim_options)
-optimize: result
-
-debug: opt += $(debug_options)
+debug: opt += -fcheck=all
 debug: result
+
+optimize: opt += -Ofast
+optimize: result
 
 $(name): $(obj)
 		$(comp) $^ -o $@
