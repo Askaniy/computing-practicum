@@ -5,8 +5,8 @@ module my_io
     public str, input, output, isspacesymbol, isspace, lower, upper, &
         swap, read_argument, import_grid, import_vector, import_matrix, tlen
 
-    integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int всегда 4 байта)
-    integer, parameter, public :: dp = 3 ! "decimal places", число знаков после запятой в форматированном выводе
+    integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int 4 байта всегда)
+    integer, parameter, public :: dp = 4 ! "decimal places", число знаков после запятой в форматированном выводе
 
     integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице

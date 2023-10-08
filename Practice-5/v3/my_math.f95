@@ -187,12 +187,12 @@ module my_math
                     s(0:size(XYP, dim=2)-1), r(0:size(XYP, dim=2)-1), & ! промежуточные вектора
                     h(0:size(XYP, dim=2)-2), h_j, xi, t
         n = size(XYP, dim=2) - 1 ! число интервалов входной сетки
-        call spline_vectors(XYP, n, r, s)
+        call spline_vectors(XYP, n, s, r)
         m = n * q ! число интервалов новой сетки
         h_j = (XYP(1,n) - XYP(1,0)) / m ! шаг новой сетки
         h = diffs(XYP(1,:)) ! предвычисленный массив разностей иксов
         do concurrent (j=0:m) ! можно было итерировать по входной сетке, но так должно быть быстрее
-            xi = h_j * j ! текущая точка
+            xi = XYP(1,0) + h_j * j ! текущая точка
             i = find_index(XYP(1,:), xi) - 1 ! сдвиг из-за местного отсчёта от нуля
             t = (xi - XYP(1,i)) / h(i)
             approximated(1,j) = xi
@@ -201,10 +201,10 @@ module my_math
     end function
 
     ! Вспомогательная функция, формирующая вектора R и S
-    subroutine spline_vectors(XYP, n, r, s)
+    subroutine spline_vectors(XYP, n, s, r)
         integer, intent(in) :: n ! передаю внутрь для упрощения инициализации размеров ниже
         real(mp), intent(in) :: XYP(1:3, 0:n)
-        real(mp), intent(inout) :: r(n+1), s(n+1)
+        real(mp), intent(inout) :: s(n+1), r(n+1)
         real(mp) :: a(-1:1, n+1), b(-1:1, n+1), qbt(-1:1, n+1), aa(-2:2, n+1) ! трёхдиагональные и пятидиагональные
         a = 0
         a(0,1) = 2*XYP(1,1) - 2*XYP(1,0) ! напоминание, что здесь "XYP(1,:)" - это колонка иксов
@@ -236,6 +236,7 @@ module my_math
         end do
         aa = 6 * multiply(b, qbt, 'tridiagonal')
         aa(-1:1,:) = aa(-1:1,:) + a ! правая часть СЛУ
+        !call output('aa = ', aa) ! слегка несимметрична?
         s = solve_pentadiagdominant_sle(aa, 6 * multiply(b, XYP(2,:), 'tridiagonal'))
         r = XYP(2,:) - multiply(qbt, s, 'tridiagonal') ! вектор результатов R = Y - Q B^T S
     end subroutine
