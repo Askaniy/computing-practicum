@@ -5,7 +5,7 @@ program quest5v3
     use my_math
     implicit none
     
-    integer :: i, n, q=10 ! число разбиений интервала
+    integer :: n, q=10 ! число разбиений интервала
     real(mp), allocatable :: XYP(:,:), XY(:,:) ! массивы X, Y и P (весов)
 
     open(1, file='data.dat', status='old')
@@ -13,7 +13,7 @@ program quest5v3
         allocate(XYP(3, n+1))
         read(1,*) XYP
     close(1)
-    call output('XYP =', XYP)
+    !call output('XYP =', XYP)
 
     allocate(XY(2, n+1))
     XY = spline_approx(XYP, q)

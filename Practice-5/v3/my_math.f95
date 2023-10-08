@@ -184,25 +184,27 @@ module my_math
         integer :: n, m
         real(mp), intent(in) :: XYP(:, 0:) ! начальная сетка в виде колонок X, Y, P
         real(mp) :: approximated(2, 0:(size(XYP, dim=2)-1)*q), & ! результат в виде X, Y
-                    s(size(XYP, dim=2)), r(size(XYP, dim=2)), & ! промежуточные вектора
-                    h_j, xi, t
+                    s(0:size(XYP, dim=2)-1), r(0:size(XYP, dim=2)-1), & ! промежуточные вектора
+                    h(0:size(XYP, dim=2)-2), h_j, xi, t
         n = size(XYP, dim=2) - 1 ! число интервалов входной сетки
         call spline_vectors(XYP, n, r, s)
         m = n * q ! число интервалов новой сетки
         h_j = (XYP(1,n) - XYP(1,0)) / m ! шаг новой сетки
-        !do concurrent (j=0:m) ! можно было итерировать по i, но так должно быть быстрее
-        !    xi = h_j * j ! текущая точка
-        !    i = find_index ! целочисленное деление
-        !    approximated(j) = r(i) * (1-t) + r(i+1) 
-        !end do
-        approximated = 0
+        h = diffs(XYP(1,:)) ! предвычисленный массив разностей иксов
+        do concurrent (j=0:m) ! можно было итерировать по входной сетке, но так должно быть быстрее
+            xi = h_j * j ! текущая точка
+            i = find_index(XYP(1,:), xi) - 1 ! сдвиг из-за местного отсчёта от нуля
+            t = (xi - XYP(1,i)) / h(i)
+            approximated(1,j) = xi
+            approximated(2,j) = r(i)*(1-t) + r(i+1)*t - h(i)*h(i)*t*(1-t)*((2-t)*s(i)+(1+t)*s(i+1))/6
+        end do
     end function
 
     ! Вспомогательная функция, формирующая вектора R и S
     subroutine spline_vectors(XYP, n, r, s)
         integer, intent(in) :: n ! передаю внутрь для упрощения инициализации размеров ниже
         real(mp), intent(in) :: XYP(1:3, 0:n)
-        real(mp), intent(inout) :: r(1:n+1), s(1:n+1)
+        real(mp), intent(inout) :: r(n+1), s(n+1)
         real(mp) :: a(-1:1, n+1), b(-1:1, n+1), qbt(-1:1, n+1), aa(-2:2, n+1) ! трёхдиагональные и пятидиагональные
         a = 0
         a(0,1) = 2*XYP(1,1) - 2*XYP(1,0) ! напоминание, что здесь "XYP(1,:)" - это колонка иксов
@@ -361,19 +363,26 @@ module my_math
     end function
 
     ! Бинарный поиск нижнего индекса по сортированному массиву
-    pure function find_index(x, t) result(left)
-        real(mp), intent(in) :: x(:), t
+    pure function find_index(array, t) result(left)
+        real(mp), intent(in) :: array(:), t
         integer :: left, right, mid
         left = 1 ! индексация ответа от единицы
-        right = size(x)
+        right = size(array)
         do while (left < right-1)
             mid = (left + right) / 2
-            if (x(mid) <= t) then
+            if (array(mid) <= t) then
                 left = mid
             else
                 right = mid
             end if
         end do
+    end function
+
+    ! Создание массива промежутков между элементами
+    pure function diffs(array)
+        real(mp), intent(in) :: array(:)
+        real(mp) :: diffs(size(array)-1)
+        diffs = array(2:size(array)) - array(1:size(array)-1)
     end function
 
 end module
