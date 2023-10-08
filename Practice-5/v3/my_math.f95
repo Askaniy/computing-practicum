@@ -4,7 +4,7 @@ module my_math
 
     private
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
-    polynomial_interp, spline_approx, integrate, multiply
+    polynomial_interp, spline_approx, integrate, multiply, find_index
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -184,30 +184,44 @@ module my_math
         integer :: n, m
         real(mp), intent(in) :: XYP(:, 0:) ! начальная сетка в виде колонок X, Y, P
         real(mp) :: approximated(2, 0:(size(XYP, dim=2)-1)*q), & ! результат в виде X, Y
-                    a(-1:1, size(XYP, dim=2)), b(-1:1, size(XYP, dim=2)), qbt(-1:1, size(XYP, dim=2)), & ! размера n+1
-                    x(0:size(XYP, dim=2)-1), aa(-2:2, size(XYP, dim=2)), &
-                    s(size(XYP, dim=2)), r(size(XYP, dim=2))
-        n = size(XYP, dim=2) - 1
-        m = size(approximated, dim=2) - 1 ! число интервалов
-        x = XYP(1,:) ! дублирование колонки иксов для синтаксической простоты
+                    s(size(XYP, dim=2)), r(size(XYP, dim=2)), & ! промежуточные вектора
+                    h_j, xi, t
+        n = size(XYP, dim=2) - 1 ! число интервалов входной сетки
+        call spline_vectors(XYP, n, r, s)
+        m = n * q ! число интервалов новой сетки
+        h_j = (XYP(1,n) - XYP(1,0)) / m ! шаг новой сетки
+        !do concurrent (j=0:m) ! можно было итерировать по i, но так должно быть быстрее
+        !    xi = h_j * j ! текущая точка
+        !    i = find_index ! целочисленное деление
+        !    approximated(j) = r(i) * (1-t) + r(i+1) 
+        !end do
+        approximated = 0
+    end function
+
+    ! Вспомогательная функция, формирующая вектора R и S
+    subroutine spline_vectors(XYP, n, r, s)
+        integer, intent(in) :: n ! передаю внутрь для упрощения инициализации размеров ниже
+        real(mp), intent(in) :: XYP(1:3, 0:n)
+        real(mp), intent(inout) :: r(1:n+1), s(1:n+1)
+        real(mp) :: a(-1:1, n+1), b(-1:1, n+1), qbt(-1:1, n+1), aa(-2:2, n+1) ! трёхдиагональные и пятидиагональные
         a = 0
-        a(0,1) = 2*x(1) - 2*x(0) ! 2 за скобку не выношу, т.к. "вычитать почти равные числа - плохо"
-        a(0,2) = 2*x(2) - 2*x(0)
-        a(1,2) = x(2) - x(1)
-        a(-1,n) = x(n-1) - x(n-2)
-        a(0,n) = 2*x(n) - 2*x(n-2)
-        a(0,n+1) = 2*x(n) - 2*x(n-1)
+        a(0,1) = 2*XYP(1,1) - 2*XYP(1,0) ! напоминание, что здесь "XYP(1,:)" - это колонка иксов
+        a(0,2) = 2*XYP(1,2) - 2*XYP(1,0) ! 2 за скобку не выношу, т.к. "вычитать почти равные числа - плохо"
+        a(1,2) = XYP(1,2) - XYP(1,1)
+        a(-1,n) = XYP(1,n-1) - XYP(1,n-2)
+        a(0,n) = 2*XYP(1,n) - 2*XYP(1,n-2)
+        a(0,n+1) = 2*XYP(1,n) - 2*XYP(1,n-1)
         b = 0
-        b(-1,2) = 1/(x(1) - x(0))  ! предрасчитываю вручную первые и последние две строки, а не расширяю нулями, т.к.
-        b(1,2) = 1/a(1,2)          ! 1) эти матрицы потом перемножаются, менять их размеры не удобно
-        b(0,2) = -b(-1,1) - b(1,1) ! 2) для матрицы A другого варианта нет
+        b(-1,2) = 1/(XYP(1,1) - XYP(1,0))  ! предрасчитываю вручную первые и последние две строки, а не расширяю нулями, т.к.
+        b(1,2) = 1/a(1,2)                  ! 1) эти матрицы потом перемножаются, менять их размеры не удобно
+        b(0,2) = -b(-1,1) - b(1,1)         ! 2) для матрицы A другого варианта нет
         b(-1,n) = 1/a(-1,n)
-        b(1,n) = 1/(x(n) - x(n-1))
+        b(1,n) = 1/(XYP(1,n) - XYP(1,n-1))
         b(0,n) = -b(-1,n) - b(1,n)
         do concurrent (i=3:n-1) ! быстрее за счёт распараллеливания, но больше вычислений, чем если итеративно
-            a(-1,i) = x(i-1) - x(i-2)
-            a(1, i) = x(i) - x(i-1)
-            a(0, i) = 2*x(i) - 2*x(i-2)
+            a(-1,i) = XYP(1,i-1) - XYP(1,i-2)
+            a(1, i) = XYP(1,i) - XYP(1,i-1)
+            a(0, i) = 2*XYP(1,i) - 2*XYP(1,i-2)
             b(-1,i) = 1/a(-1,i)
             b(1, i) = 1/a(1,i)
             b(0, i) = -b(-1,i) - b(1,i)
@@ -222,9 +236,7 @@ module my_math
         aa(-1:1,:) = aa(-1:1,:) + a ! правая часть СЛУ
         s = solve_pentadiagdominant_sle(aa, 6 * multiply(b, XYP(2,:), 'tridiagonal'))
         r = XYP(2,:) - multiply(qbt, s, 'tridiagonal') ! вектор результатов R = Y - Q B^T S
-        call output('r =', r)
-        approximated = 0
-    end function
+    end subroutine
 
 
     ! Серия функций integrate. Принимает функцию, интервал и число промежутков
@@ -346,6 +358,22 @@ module my_math
                 end do
             end block
         end if
+    end function
+
+    ! Бинарный поиск нижнего индекса по сортированному массиву
+    pure function find_index(x, t) result(left)
+        real(mp), intent(in) :: x(:), t
+        integer :: left, right, mid
+        left = 1 ! индексация ответа от единицы
+        right = size(x)
+        do while (left < right-1)
+            mid = (left + right) / 2
+            if (x(mid) <= t) then
+                left = mid
+            else
+                right = mid
+            end if
+        end do
     end function
 
 end module

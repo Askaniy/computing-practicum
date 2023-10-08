@@ -25,5 +25,5 @@ $(name).o: my_io.mod my_math.mod
 result: $(name)
 		time -v -o time.log ./$(name) $(mode)
 
-clear:
+clean:
 		rm -f *.o *.mod $(name) time.log
