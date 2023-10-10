@@ -7,22 +7,18 @@ program quest5v2
     use my_math
     implicit none
     
-    integer :: i, j, m
     real(mp), allocatable :: a(:,:), b(:), c(:)
 
-    !a = import_matrix('data1.dat', 'square')
-    a = import_matrix('data1.dat', 'pentadiagonal')
+    a = import_matrix('data1.dat', 'square')
     call output('a =', a)
 
     b = import_vector('data2.dat')
     call output('b =', b)
 
-    m = size(a, dim=2)
+    c = solve_diagdominant_sle(a, b, 'relax')
+    call output('reference =', c)
 
-    !c = solve_diagdominant_sle(a, b, 'relax')
-    !call output('c =', c)
-
-    c = solve_pentadiagdominant_sle(a, b)
-    call output('c =', c)
+    c = solve_pentadiagdominant_sle(compressed(a), b)
+    call output('result =', c)
     
 end program

@@ -216,7 +216,7 @@ module my_math
         b = 0
         b(-1,2) = 1/(XYP(1,1) - XYP(1,0))  ! предрасчитываю вручную первые и последние две строки, а не расширяю нулями, т.к.
         b(1,2) = 1/a(1,2)                  ! 1) эти матрицы потом перемножаются, менять их размеры не удобно
-        b(0,2) = -b(-1,1) - b(1,1)         ! 2) для матрицы A другого варианта нет
+        b(0,2) = -b(-1,2) - b(1,2)         ! 2) для матрицы A другого варианта нет
         b(-1,n) = 1/a(-1,n)
         b(1,n) = 1/(XYP(1,n) - XYP(1,n-1))
         b(0,n) = -b(-1,n) - b(1,n)
@@ -361,6 +361,20 @@ module my_math
                 end do
             end block
         end if
+    end function
+
+    ! Сжимает пятидиагональную матрицу (не используется)
+    function compressed(matrix)
+        real(mp), intent(in) :: matrix(:,:)
+        real(mp) :: compressed(5, size(matrix, dim=2))
+        integer(mp) :: n
+        n = size(matrix, dim=2)
+        compressed = 0
+        compressed(1, 3:n) = [( matrix(i,i+2), i=1,n-2 )]
+        compressed(2, 2:n) = [( matrix(i,i+1), i=1,n-1 )]
+        compressed(3, 1:n) = [( matrix(i,i),   i=1,n   )]
+        compressed(4, 1:n-1) = [( matrix(i,i-1), i=2,n   )]
+        compressed(5, 1:n-2) = [( matrix(i,i-2), i=3,n   )]
     end function
 
     ! Бинарный поиск нижнего индекса по сортированному массиву

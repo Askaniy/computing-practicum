@@ -68,10 +68,14 @@ module my_io
     function import_matrix(path, mode) result(array)
         integer :: i, j, n
         real(mp), allocatable :: array(:,:)
-        character(*) :: path, mode
+        character(*) :: path
+        character(*), optional :: mode
+        if (.not. present(mode)) then
+            mode = 'square'
+        end if
         open(1, file=path, status='old')
             read(1,'(2x, i5)') n ! размер матрицы задаётся с третьего символа первой строки
-            if (mode == 'square') then
+            if (trim(mode) == 'square') then
                 allocate(array(n, n))
                 read(1,*) array
             elseif (mode == 'tridiagonal') then

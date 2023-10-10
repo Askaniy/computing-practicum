@@ -15,6 +15,8 @@ program quest5v3
     close(1)
     !call output('XYP =', XYP)
 
+    XYP(3,:) = XYP(3,:) / 10000
+
     allocate(XY(2, n+1))
     XY = spline_approx(XYP, q)
 

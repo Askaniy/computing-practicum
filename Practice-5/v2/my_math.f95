@@ -3,7 +3,8 @@ module my_math
     implicit none
 
     private
-    public dist, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, polynomial_interp, integrate, multiply, isdiagdominant
+    public dist, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
+        polynomial_interp, integrate, multiply, isdiagdominant, compressed
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -14,6 +15,19 @@ module my_math
 
     contains
 
+    ! Сжимает пятидиагональную матрицу
+    function compressed(matrix)
+        real(mp), intent(in) :: matrix(:,:)
+        real(mp) :: compressed(5, size(matrix, dim=2))
+        integer(mp) :: n
+        n = size(matrix, dim=2)
+        compressed = 0
+        compressed(1, 3:n) = [( matrix(i,i+2), i=1,n-2 )]
+        compressed(2, 2:n) = [( matrix(i,i+1), i=1,n-1 )]
+        compressed(3, 1:n) = [( matrix(i,i),   i=1,n   )]
+        compressed(4, 1:n-1) = [( matrix(i,i-1), i=2,n   )]
+        compressed(5, 1:n-2) = [( matrix(i,i-2), i=3,n   )]
+    end function
 
     pure function dist(a, b) ! возвращает евклидову метрику
         real(mp), intent(in) :: a(:), b(:)
