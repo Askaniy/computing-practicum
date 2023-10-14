@@ -4,7 +4,7 @@ module my_math
 
     private
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
-    polynomial_interp, spline_approx, integrate, multiply, find_index
+    polynomial_interp, spline_approx, newton, integrate, multiply, find_index
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -240,6 +240,20 @@ module my_math
         s = solve_pentadiagdominant_sle(aa, 6 * multiply(b, XYP(2,:), 'tridiagonal'))
         r = XYP(2,:) - multiply(qbt, s, 'tridiagonal') ! вектор результатов R = Y - Q B^T S
     end subroutine
+
+    ! Задание 6: многомерный метод Ньютона
+    function newton(f, initial_vector, limit) result(solution)
+        integer :: n, m
+        real(mp), external :: f
+        real(mp), intent(in) :: initial_vector(:)
+        real(mp) :: solution(size(initial_vector))
+        integer, optional :: limit
+        if (.not. present(limit)) then
+            limit = 100
+        end if
+        write(*,*) limit
+        solution = 0
+    end function
 
 
     ! Серия функций integrate. Принимает функцию, интервал и число промежутков

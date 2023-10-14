@@ -1,18 +1,12 @@
 ! Задание 6: Многомерный метод Ньютона
 
-program quest6v1
+module functions
     use my_io
     use my_math
     implicit none
-    
+
     integer :: i, j, n
-    real(mp), allocatable :: solution(:)
-
-    solution = [1, 2, 3]
-
-    open(1, file='result.dat')
-        write(1,'(f9.'//str(dp)//')') solution
-    close(1)
+    real(mp) :: matrix3(3,3) = reshape([2, 1, 3, -1, 1, 0, -1, 1, 0], [3, 3])
 
     contains
 
@@ -35,5 +29,27 @@ program quest6v1
         matrix(:,n-1) = matrix(:,n) ! уменьшение ранга для возникновения нетривиального решения
         test_func_2 = multiply(matrix, x)
     end function
+
+    function test_func_3(x) ! частный случай test_func_2 для размерности 3, тоже не работает
+        real(mp), intent(in) :: x(3)
+        real(mp) :: test_func_3(3)
+        test_func_3 = multiply(matrix3, x)
+    end function
+
+end module
+
+program quest6v1
+    use my_io
+    use my_math
+    use functions
+    implicit none
+    
+    real(mp), allocatable :: initial_vector(:)
+
+    initial_vector = [10, 10, 10]
+
+    open(1, file='result.dat')
+        write(1,'(f9.'//str(dp)//')') newton(test_func_3, initial_vector)
+    close(1)
     
 end program
