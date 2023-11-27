@@ -51,8 +51,9 @@ program quest6v1
     initial_vector = [10, 10, 10]
     call output('res =', test_func_3(initial_vector))
     write(*,*) size(test_func_3(initial_vector))
-    open(1, file='result.dat')
-        write(1,'(f9.'//str(dp)//')') newton(test_func_3, initial_vector)
-    close(1)
+    !open(1, file='result.dat')
+    !    write(1,'(f9.'//str(dp)//')') newton(test_func_3, initial_vector)
+    !close(1)
+    call output('Якобиан =', differentiate(test_func_3, initial_vector))
     
 end program

@@ -6,14 +6,15 @@ module my_math
 
     private
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
-    polynomial_interp, spline_approx, newton, integrate, multiply, find_index
+    polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
     end interface
 
     integer :: i, j, k
-    real, parameter, private :: eps = 10.0_mp**(-dp)
+    real(mp), parameter, private :: eps = 10.0**(-dp) ! output accuracy
+    real(mp), parameter, private :: delta_x = sqrt(epsilon(eps)) ! differentiation step
 
     contains
 
@@ -245,7 +246,7 @@ module my_math
 
     ! Задание 6: многомерный метод Ньютона
     function newton(f, initial_vector, limit) result(solution)
-        integer :: n, m
+        integer :: n
         real(mp), intent(in) :: initial_vector(:)
         real(mp), dimension(size(initial_vector)) :: solution
         integer, optional :: limit
@@ -261,6 +262,36 @@ module my_math
         end if
         write(*,*) limit
         solution = 0
+    end function
+
+    ! Вычисление матрицы Якоби (не протестировано)
+    function differentiate(f, x) result(jacobian)
+        integer :: n
+        real(mp), intent(in) :: x(:)
+        real(mp), dimension(size(x)) :: f1, f2, delta_i
+        real(mp), dimension(size(x), size(x)) :: jacobian
+        interface
+            pure function f(x) result(y)
+                use my_consts, only: mp
+                real(mp), intent(in) :: x(:)
+                real(mp), dimension(size(x)) :: y
+            end
+        end interface
+        n = size(x)
+        do concurrent (i=1:n)
+            delta_i = kronecker_delta(i, n)
+            f1 = f(x - delta_i * delta_x)
+            f2 = f(x + delta_i * delta_x)
+            jacobian(i,:) = (f2-f1) / (2*delta_x)
+        end do
+    end function
+
+    ! Символ Кронекера. Возвращает нулевой n-вектор с единицей на i-том месте.
+    pure function kronecker_delta(i, n) result(array)
+        integer, intent(in) :: i, n
+        real(mp), dimension(n) :: array
+        array(:) = 0
+        array(i) = 1
     end function
 
 
