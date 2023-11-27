@@ -3,6 +3,7 @@
 module functions
     use my_io
     use my_math
+    use my_consts
     implicit none
 
     integer :: i, j, n
@@ -30,10 +31,10 @@ module functions
         test_func_2 = multiply(matrix, x)
     end function
 
-    function test_func_3(x) ! частный случай test_func_2 для размерности 3, тоже не работает
-        real(mp), intent(in) :: x(3)
-        real(mp) :: test_func_3(3)
-        test_func_3 = multiply(matrix3, x)
+    function test_func_3(x) result(y) ! частный случай test_func_2 для размерности 3, тоже не работает
+        real(mp), intent(in), dimension(3) :: x
+        real(mp), dimension(3) :: y
+        y = multiply(matrix3, x)
     end function
 
 end module
@@ -41,13 +42,15 @@ end module
 program quest6v1
     use my_io
     use my_math
+    use my_consts
     use functions
     implicit none
     
     real(mp), allocatable :: initial_vector(:)
 
     initial_vector = [10, 10, 10]
-
+    call output('res =', test_func_3(initial_vector))
+    write(*,*) size(test_func_3(initial_vector))
     open(1, file='result.dat')
         write(1,'(f9.'//str(dp)//')') newton(test_func_3, initial_vector)
     close(1)

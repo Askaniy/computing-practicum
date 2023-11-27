@@ -1,5 +1,7 @@
 module my_math
-    use my_io !use, intrinsic :: ieee_arithmetic
+    use my_consts
+    use my_io
+    !use, intrinsic :: ieee_arithmetic
     implicit none
 
     private
@@ -244,10 +246,16 @@ module my_math
     ! Задание 6: многомерный метод Ньютона
     function newton(f, initial_vector, limit) result(solution)
         integer :: n, m
-        real(mp), external :: f
         real(mp), intent(in) :: initial_vector(:)
-        real(mp) :: solution(size(initial_vector))
+        real(mp), dimension(size(initial_vector)) :: solution
         integer, optional :: limit
+        interface
+            function f(x) result(y)
+                use my_consts, only: mp
+                real(mp), intent(in) :: x(:)
+                real(mp), dimension(size(x)) :: y
+            end
+        end interface
         if (.not. present(limit)) then
             limit = 100
         end if
