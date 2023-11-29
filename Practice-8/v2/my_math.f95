@@ -6,7 +6,8 @@ module my_math
 
     private
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
-    polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index
+    polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
+    solve_quadratic_equation, get_abs_max_root, solve_polynomial
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -28,6 +29,22 @@ module my_math
     pure logical function isdiagdominant(a) ! возвращает .true., если у матрицы имеется диагональное преобладание
         real(mp), intent(in) :: a(:,:)
         isdiagdominant = all([( ( 2*abs(a(j,j)) >= sum(abs(a(:,j))) ), j=1,size(a, dim=2) )])
+    end function
+
+    ! Задание 2: интерполирование полиномами
+    function polynomial_interp(grid, q, a, b) result(interpolated)
+        integer, intent(in) :: q ! число разбиений интервала
+        integer :: n, m
+        real(mp), intent(in) :: grid(:, 0:), a, b ! начальная сетка в виде колонок x, f(x)
+        real(mp) :: interpolated(2, 0:(size(grid, dim=2)-1)*q) ! результат в том же виде
+        n = size(grid, dim=2) - 1
+        m = size(interpolated, dim=2) - 1 ! число интервалов
+        interpolated(1,:) = [(a + j*(b-a)/m, j=0,m)]
+        interpolated(2,:) = [(dot_product( & ! интерполяционный полином
+                                grid(2,:), [(product( & ! интерполяционный базис
+                                    (interpolated(1,j) - grid(1,:)) / (grid(1,k) - grid(1,:)), &
+                                    mask = grid(1,k)/=grid(1,:)), k=0,n)]), &
+                            j=0,m)]
     end function
 
     ! Задание 3: решение СЛУ методом Гаусса
@@ -165,22 +182,6 @@ module my_math
         end do
     end function
 
-    ! Задание 2: интерполирование полиномами
-    function polynomial_interp(grid, q, a, b) result(interpolated)
-        integer, intent(in) :: q ! число разбиений интервала
-        integer :: n, m
-        real(mp), intent(in) :: grid(:, 0:), a, b ! начальная сетка в виде колонок x, f(x)
-        real(mp) :: interpolated(2, 0:(size(grid, dim=2)-1)*q) ! результат в том же виде
-        n = size(grid, dim=2) - 1
-        m = size(interpolated, dim=2) - 1 ! число интервалов
-        interpolated(1,:) = [(a + j*(b-a)/m, j=0,m)]
-        interpolated(2,:) = [(dot_product( & ! интерполяционный полином
-                                grid(2,:), [(product( & ! интерполяционный базис
-                                    (interpolated(1,j) - grid(1,:)) / (grid(1,k) - grid(1,:)), &
-                                    mask = grid(1,k)/=grid(1,:)), k=0,n)]), &
-                            j=0,m)]
-    end function
-
     ! Задание 5: аппроксимация сплайнами
     function spline_approx(XYP, q) result(approximated)
         integer, intent(in) :: q ! число разбиений интервала
@@ -292,6 +293,71 @@ module my_math
         real(mp), dimension(n) :: array
         array(:) = 0
         array(i) = 1
+    end function
+
+    ! Задание 8: метод численного интегрирования Гаусса
+
+    ! Находит вещественные корни полинома `P(x) = a_0 x^n + ... + a_n = 0`
+    function solve_polynomial(a) result(x)
+        real(mp), intent(in) :: a(0:)
+        real(mp) :: x1, x(size(a)-1), a1(size(a)-1)
+        integer :: n
+        n = size(a) - 1 ! степень многочлена
+        write(*,*) n
+        select case (n)
+            case (1)
+                x(1) = - a(1) / a(0)
+            case (2)
+                x(:) = solve_quadratic_equation(a(0), a(1), a(2))
+            case (3:)
+                !x1 = get_abs_max_root(a)
+                !a1 = polynomial_division(a, x1)
+                do i = n,2,-1
+                    write(*,*) i
+                end do
+        end select
+        x = 0
+    end function
+
+    ! Решает квадратное уравнение. Возвращает NaN, если корни комплексные.
+    function solve_quadratic_equation(a, b, c) result(x)
+        real(mp), intent(in) :: a, b, c
+        real(mp) :: a2, x(2), left_part, right_part
+        a2 = 2 * a
+        left_part = -b / a2
+        right_part = sqrt(b*b - 2*a2*c) / a2
+        x(1) = left_part + right_part
+        x(2) = left_part - right_part
+    end function
+
+    ! Поиск максимального по модулю корня через рекуррентное уравнение методом Бернулли
+    function get_abs_max_root(a) result(x1)
+        real(mp), intent(in) :: a(0:)
+        real(mp) :: x1, y(1:size(a)-1), b(1:size(a)-1)
+        integer :: n
+        n = size(a) - 1 ! степень многочлена
+        b = a(1:) / a(0) ! приведённые коэффициенты
+        call random_number(y) ! n начальных значений
+        do while (abs(y(1)/y(2) - y(2)/y(3)) > 0.0001) ! УТОЧНИТЬ EPSILON
+            x1 = - dot_product(y, b) ! x1 как буферная переменная
+            y(2:n) = y(1:n-1) ! сдвиг: новый элемент в начало
+            y(1) = x1
+            write(*,*) x1
+        end do
+        x1 = y(1)/y(2)
+    end function
+
+    ! Делит `P(x) = a_0 x^n + ... + a_n` на `x - x0` методом Горнера
+    function polynomial_division(a, x0) result(b)
+        real(mp), intent(in) :: a(0:), x0
+        real(mp) :: b(0:size(a)-2)
+        integer :: n
+        n = size(a) - 1 ! степень многочлена
+        b(0) = a(0)
+        do i = 1,n-1
+            b(i) = b(i-1) * x0 + a(i)
+        end do
+        !r = b(n-1) * x0 + a(n) ! остаток
     end function
 
 

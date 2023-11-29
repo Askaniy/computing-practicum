@@ -38,7 +38,7 @@ module sandbox
         m = size(array0)
         nk = [(i, i=0,m-1)]
         w = exp(sign * complex(0, 2) * pi / m * meshgrid(nk, nk))
-        array1 = matmul(w, array0) / sqrt(real(m))
+        array1 = matmul(array0, w) / sqrt(real(m))
     end function
 
     ! Создаёт матрицу из попарных перемножений
