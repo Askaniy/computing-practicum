@@ -7,7 +7,7 @@ module my_math
     private
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
     polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
-    solve_quadratic_equation, get_abs_max_root, solve_polynomial
+    solve_quadratic_equation, get_abs_max_root, solve_polynomial, legendre_polynomial_coefficients
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -290,14 +290,38 @@ module my_math
     end function
 
     ! Символ Кронекера. Возвращает нулевой n-вектор с единицей на i-том месте.
-    pure function kronecker_delta(i, n) result(array)
-        integer, intent(in) :: i, n
+    pure function kronecker_delta(index, n) result(array)
+        integer, intent(in) :: index, n
         real(mp), dimension(n) :: array
         array(:) = 0
-        array(i) = 1
+        array(index) = 1
     end function
 
     ! Задание 8: метод численного интегрирования Гаусса
+
+    ! Вычисляет коэффициенты полинома Лежандра
+    function legendre_polynomial_coefficients(n) result(coeffs)
+        integer, intent(in) :: n
+        real(mp) :: coeffs0(0:n), coeffs1(0:n), coeffs(0:n)
+        select case (n)
+            case (0)
+                coeffs = 1
+            case (1)
+                coeffs = [1, 0]
+            case (2:)
+                coeffs0 = 0
+                coeffs1 = 0
+                coeffs0(n) = 1 ! P_0(x) = 1
+                coeffs1(n-1) = 1 ! P_1(x) = x
+                do i = 2,n
+                    coeffs(:n-1) = coeffs1(1:) ! эффект умножения на x
+                    coeffs(n) = 0
+                    coeffs = ((2*i-1) * coeffs - (i-1) * coeffs0) / i
+                    coeffs0 = coeffs1
+                    coeffs1 = coeffs
+                end do
+        end select
+    end function
 
     ! Находит вещественные корни полинома `P(x) = a_0 x^n + ... + a_n = 0`
     function solve_polynomial(a) result(x)
@@ -335,12 +359,12 @@ module my_math
             x = left_part
         else
             right_part = sqrt(d) * a2
-            x(1) = left_part + right_part
-            x(2) = left_part - right_part
+            x(1) = left_part - right_part
+            x(2) = left_part + right_part
         end if
     end function
 
-    ! Поиск максимального по модулю корня через рекуррентное уравнение методом Бернулли
+    ! Поиск максимального по модулю корня полинома методом Бернулли
     function get_abs_max_root(a, iterations_limit) result(x1)
         real(mp), intent(in) :: a(0:)
         integer, intent(in), optional :: iterations_limit

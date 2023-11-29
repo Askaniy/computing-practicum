@@ -8,10 +8,11 @@ program quest8v2
     
     integer :: i, j, n
     !real(mp), allocatable :: array(:,:)
-    real(mp) :: roots(4), a(5) = [1, -3, -3, 7, 6] ! корни: -1, 2, 3
+    real(mp), allocatable :: a(:)
 
-    roots = solve_polynomial(a)
-    write(*,*) roots
+    a = legendre_polynomial_coefficients(3)
+
+    write(*,*) a
 
     !open(1, file='data.dat', status='old')
     !    read(1,'(2x, i5)') n
