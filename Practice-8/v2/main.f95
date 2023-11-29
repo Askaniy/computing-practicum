@@ -8,11 +8,10 @@ program quest8v2
     
     integer :: i, j, n
     !real(mp), allocatable :: array(:,:)
-    real(mp), allocatable :: a(:)
+    real(mp), allocatable :: a(:), b(:)
 
-    a = legendre_polynomial_coefficients(3)
-
-    write(*,*) a
+    b = solve_legendre_polynomial(4)
+    write(*,*) b
 
     !open(1, file='data.dat', status='old')
     !    read(1,'(2x, i5)') n

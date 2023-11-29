@@ -7,7 +7,7 @@ module my_math
     private
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
     polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
-    solve_quadratic_equation, get_abs_max_root, solve_polynomial, legendre_polynomial_coefficients
+    solve_quadratic_equation, get_abs_max_root, solve_polynomial, solve_legendre_polynomial
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -299,6 +299,13 @@ module my_math
 
     ! Задание 8: метод численного интегрирования Гаусса
 
+    ! Вычисляет корни полинома Лежандра
+    function solve_legendre_polynomial(n) result(roots)
+        integer, intent(in) :: n
+        real(mp), allocatable :: roots(:)
+        roots = solve_polynomial(legendre_polynomial_coefficients(n))
+    end function
+
     ! Вычисляет коэффициенты полинома Лежандра
     function legendre_polynomial_coefficients(n) result(coeffs)
         integer, intent(in) :: n
@@ -325,6 +332,27 @@ module my_math
 
     ! Находит вещественные корни полинома `P(x) = a_0 x^n + ... + a_n = 0`
     function solve_polynomial(a) result(x)
+        real(mp), intent(in) :: a(0:)
+        real(mp) :: x(size(a)-1)
+        integer :: n
+        n = size(a) - 1 ! фактическая степень многочлена, стремимся уменьшить
+        x = 0
+        ! делим на столько иксов, на сколько можем
+        do i = n,1,-1
+            if (a(i) /= 0) exit
+            n = n - 1
+        end do
+        ! проверяем делимость на x^2
+        if (all(a(1:n:2) == 0)) then
+            x(1:n:2) = sqrt(solve_polynomial_directly(a(0:n:2)))
+            x(2:n:2) = -x(1:n:2)
+        else
+            x(:n) = solve_polynomial_directly(a(:n))
+        end if
+    end function
+
+    ! Находит вещественные корни полинома напрямую, без попытки упростить
+    function solve_polynomial_directly(a) result(x)
         real(mp), intent(in) :: a(0:)
         real(mp) :: x(size(a)-1), a1(0:size(a)-1)
         integer :: n, m
