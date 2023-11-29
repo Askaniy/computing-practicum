@@ -14,8 +14,8 @@ module my_math
     end interface
 
     integer :: i, j, k
-    real(mp), parameter, private :: eps = 10.0**(-dp) ! output accuracy
-    real(mp), parameter, private :: delta_x = sqrt(epsilon(eps)) ! differentiation step
+    real(mp), parameter, private :: eps = tiny(0._mp) ! output accuracy
+    real(mp), parameter, private :: sqrt_eps = sqrt(eps) ! differentiation step
 
     contains
 
@@ -246,11 +246,11 @@ module my_math
     end subroutine
 
     ! Задание 6: многомерный метод Ньютона
-    function newton(f, initial_vector, limit) result(solution)
-        integer :: n
+    function newton(f, initial_vector, iterations_limit) result(solution)
         real(mp), intent(in) :: initial_vector(:)
+        integer, intent(in), optional :: iterations_limit
         real(mp), dimension(size(initial_vector)) :: solution
-        integer, optional :: limit
+        integer :: n, limit
         interface
             function f(x) result(y)
                 use my_consts, only: mp
@@ -258,8 +258,10 @@ module my_math
                 real(mp), dimension(size(x)) :: y
             end
         end interface
-        if (.not. present(limit)) then
+        if (.not. present(iterations_limit)) then
             limit = 100
+        else
+            limit = iterations_limit
         end if
         write(*,*) limit
         solution = 0
@@ -281,9 +283,9 @@ module my_math
         n = size(x)
         do concurrent (i=1:n)
             delta_i = kronecker_delta(i, n)
-            f1 = f(x - delta_i * delta_x)
-            f2 = f(x + delta_i * delta_x)
-            jacobian(i,:) = (f2-f1) / (2*delta_x)
+            f1 = f(x - delta_i * sqrt_eps)
+            f2 = f(x + delta_i * sqrt_eps)
+            jacobian(i,:) = (f2-f1) / (2*sqrt_eps)
         end do
     end function
 
@@ -300,49 +302,63 @@ module my_math
     ! Находит вещественные корни полинома `P(x) = a_0 x^n + ... + a_n = 0`
     function solve_polynomial(a) result(x)
         real(mp), intent(in) :: a(0:)
-        real(mp) :: x1, x(size(a)-1), a1(size(a)-1)
-        integer :: n
+        real(mp) :: x(size(a)-1), a1(0:size(a)-1)
+        integer :: n, m
         n = size(a) - 1 ! степень многочлена
-        write(*,*) n
         select case (n)
             case (1)
-                x(1) = - a(1) / a(0)
+                x = - a(1) / a(0) ! массив из одного элемента
             case (2)
-                x(:) = solve_quadratic_equation(a(0), a(1), a(2))
+                x = solve_quadratic_equation(a(0), a(1), a(2))
             case (3:)
-                !x1 = get_abs_max_root(a)
-                !a1 = polynomial_division(a, x1)
-                do i = n,2,-1
-                    write(*,*) i
+                a1 = a
+                do m = n,3,-1
+                    x(m) = get_abs_max_root(a1(:m))
+                    a1 = polynomial_division(a1(:m), x(m))
                 end do
+                x(1:2) = solve_quadratic_equation(a1(0), a1(1), a1(2))
         end select
-        x = 0
     end function
 
-    ! Решает квадратное уравнение. Возвращает NaN, если корни комплексные.
+    ! Решает квадратное уравнение в вещественных числах
     function solve_quadratic_equation(a, b, c) result(x)
         real(mp), intent(in) :: a, b, c
-        real(mp) :: a2, x(2), left_part, right_part
-        a2 = 2 * a
-        left_part = -b / a2
-        right_part = sqrt(b*b - 2*a2*c) / a2
-        x(1) = left_part + right_part
-        x(2) = left_part - right_part
+        real(mp) :: a2, d, x(2), left_part, right_part
+        a2 = 1 / (2*a)
+        left_part = -b * a2
+        d = b*b - 4*a*c
+        if (d < 0) then
+            ! Эксперименты показали, что когда дискриминант близок к нулю,
+            ! погрешность метода Бернулли иногда делает корни комплексными,
+            ! и возвращается [NaN, NaN].
+            ! Поэтому беру ближайший вещественный сдвоенный корень.
+            x = left_part
+        else
+            right_part = sqrt(d) * a2
+            x(1) = left_part + right_part
+            x(2) = left_part - right_part
+        end if
     end function
 
     ! Поиск максимального по модулю корня через рекуррентное уравнение методом Бернулли
-    function get_abs_max_root(a) result(x1)
+    function get_abs_max_root(a, iterations_limit) result(x1)
         real(mp), intent(in) :: a(0:)
+        integer, intent(in), optional :: iterations_limit
         real(mp) :: x1, y(1:size(a)-1), b(1:size(a)-1)
-        integer :: n
+        integer :: n, limit
+        if (.not. present(iterations_limit)) then
+            limit = 100
+        else
+            limit = iterations_limit
+        end if
         n = size(a) - 1 ! степень многочлена
         b = a(1:) / a(0) ! приведённые коэффициенты
         call random_number(y) ! n начальных значений
-        do while (abs(y(1)/y(2) - y(2)/y(3)) > 0.0001) ! УТОЧНИТЬ EPSILON
-            x1 = - dot_product(y, b) ! x1 как буферная переменная
+        do i=1,limit
+            x1 = - dot_product(y, b) ! x1 тут - буферная переменная
             y(2:n) = y(1:n-1) ! сдвиг: новый элемент в начало
             y(1) = x1
-            write(*,*) x1
+            if (abs(y(1)/y(2) - y(2)/y(3)) < eps) exit
         end do
         x1 = y(1)/y(2)
     end function
