@@ -1,4 +1,6 @@
 ! Задание 8: Гауссова квадратура
+! Выполнено до пункта 5, коэффициенты формулы Гаусса считаются неверно
+! Передача аргумента через make mode=N
 
 program quest8v2
     use my_io
@@ -6,22 +8,21 @@ program quest8v2
     use my_consts
     implicit none
     
-    integer :: i, j, n
-    !real(mp), allocatable :: array(:,:)
-    real(mp), allocatable :: a(:), b(:)
+    integer :: n, i
+    real(mp), allocatable :: t(:), a(:)
 
-    b = solve_legendre_polynomial(4)
-    write(*,*) b
+    call read_argument(1, n, default=4)
 
-    !open(1, file='data.dat', status='old')
-    !    read(1,'(2x, i5)') n
-    !    allocate(array(2, n+1))
-    !    read(1,*) array
-    !close(1)
-    !call output('array =', array)
-!
-    !open(1, file='result.dat')
-    !    write(1,'(2f9.'//str(dp)//')') array
-    !close(1)
+    t = legendre_polynomial_roots(n)
+    call output('Корни полинома Лежандра:', t)
+
+    a = gaussian_quadrature_coefficients(t)
+    call output('Коэффициенты формулы Гаусса:', a)
+
+    open(1, file='quad'//str(n)//'.dat')
+        do i=1,n
+            write(1,'(2f9.'//str(dp)//')') a(i), t(i)
+        end do
+    close(1)
     
 end program

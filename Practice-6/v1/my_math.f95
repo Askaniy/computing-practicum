@@ -7,7 +7,8 @@ module my_math
     private
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
     polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
-    solve_quadratic_equation, get_abs_max_root, solve_polynomial, solve_legendre_polynomial
+    solve_quadratic_equation, get_abs_max_root, solve_polynomial, legendre_polynomial_roots, &
+    gaussian_quadrature_coefficients
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -299,8 +300,29 @@ module my_math
 
     ! Задание 8: метод численного интегрирования Гаусса
 
+    ! Вычисляет коэффициенты квадратурной формулы Гаусса
+    function gaussian_quadrature_coefficients(roots) result(a_vector)
+        real(mp), intent(in) :: roots(:)
+        real(mp) :: t_matrix(0:size(roots)-1,0:size(roots)-1), &
+                    b_vector(size(roots)), a_vector(size(roots))
+        integer :: n
+        n = size(roots)
+        ! рекуррентно конструируем матрицу коэффициентов СЛУ
+        t_matrix(:,0) = roots
+        do k=1,n-1
+            t_matrix(:,k) = t_matrix(:,k-1) * roots
+        end do
+        ! конструируем вектор результатов СЛУ
+        b_vector = 0
+        do concurrent (k=1:n:2)
+            b_vector(k) = 2. / k
+        end do
+        ! ищем коэффициенты A через СЛУ
+        a_vector = solve_sle(t_matrix, b_vector)
+    end function
+
     ! Вычисляет корни полинома Лежандра
-    function solve_legendre_polynomial(n) result(roots)
+    function legendre_polynomial_roots(n) result(roots)
         integer, intent(in) :: n
         real(mp), allocatable :: roots(:)
         roots = solve_polynomial(legendre_polynomial_coefficients(n))

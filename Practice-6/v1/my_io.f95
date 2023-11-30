@@ -9,6 +9,10 @@ module my_io
     integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
 
+    interface read_argument
+        module procedure read_argument_str, read_argument_int
+    end interface
+
     interface swap
         module procedure swap_int, swap_real
     end interface
@@ -95,8 +99,11 @@ module my_io
         close(1)
     end function
 
-    ! Записывает аргумент вызова под заданным номером в неразмещённую строку
-    subroutine read_argument(index, arg, default)
+    
+    ! Серия подпрограмм read_argument. Записывает аргумент вызова под заданным номером
+    ! в указанную переменную (например, неразмещённую строку)
+
+    subroutine read_argument_str(index, arg, default)
         character(:), allocatable :: arg
         integer, intent(in) :: index
         integer :: arg_len, ios
@@ -111,12 +118,21 @@ module my_io
         write(*,*) 'Получено "'//arg//'"'
     end subroutine
 
+    subroutine read_argument_int(index, int, default)
+        character(:), allocatable :: arg
+        integer, intent(in) :: index
+        integer :: int
+        integer, optional :: default
+        call read_argument_str(index, arg, str(default))
+        read(arg,*) int
+    end subroutine
+
 
     ! Серия подпрограмм swap. Переставляет что угодно
     ! Пример использования: call swap(matrix(j,:), matrix(k,:))
 
     elemental subroutine swap_int(a, b)
-        integer, intent(inout) :: a, b
+        integer, intent(inout) :: a, b ! вызывает предупреждения
         integer :: tmp
         tmp = a
         a = b
@@ -124,7 +140,7 @@ module my_io
     end subroutine
 
     elemental subroutine swap_real(a, b)
-        real(mp), intent(inout) :: a, b
+        real(mp), intent(inout) :: a, b ! вызывает предупреждения
         real(mp) :: tmp
         tmp = a
         a = b
