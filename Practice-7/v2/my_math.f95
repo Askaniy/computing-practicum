@@ -8,10 +8,14 @@ module my_math
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
     polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
     solve_quadratic_equation, get_abs_max_root, solve_polynomial, legendre_polynomial_roots, &
-    gaussian_quadrature_coefficients, meshgrid
+    gaussian_quadrature_coefficients, meshgrid, discrete_fourier_transform
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
+    end interface
+    
+    interface meshgrid
+        module procedure meshgrid_int, meshgrid_real
     end interface
 
     integer :: i, j, k
@@ -302,24 +306,14 @@ module my_math
 
     ! Дискретное преобразование Фурье
     function discrete_fourier_transform(array0, sign) result(array1)
-        real(4), intent(in) :: array0(:)
+        complex(mp), intent(in) :: array0(:)
         integer, intent(in) :: sign
-        real(4) :: array1(size(array0)), nk(size(array0))
-        complex(4) :: w(size(array0), size(array0))
-        integer :: n
+        complex(mp) :: array1(size(array0)), w(size(array0), size(array0))
+        integer :: n, nk(size(array0))
         n = size(array0)
         nk = [(i, i=0,n-1)]
-        w = exp(sign * complex(0, 2) * pi / n * meshgrid(nk, nk))
+        w = exp(sign * cmplx(0, 2) * pi / n * meshgrid(nk, nk))
         array1 = matmul(array0, w) / sqrt(real(n))
-    end function
-
-    ! Создаёт матрицу из попарных перемножений
-    function meshgrid(x, y) result(grid)
-        real(mp), intent(in), dimension(:) :: x, y
-        real(mp), dimension(size(x), size(y)) :: grid
-        do concurrent (i=1:size(x), j=1:size(y))
-            grid(i,j) = x(i) * y(j)
-        end do
     end function
 
     ! Задание 8: метод численного интегрирования Гаусса
@@ -631,6 +625,24 @@ module my_math
         real(mp), intent(in) :: array(:)
         real(mp) :: diffs(size(array)-1)
         diffs = array(2:size(array)) - array(1:size(array)-1)
+    end function
+
+    ! Серия функций meshgrid: создаёт матрицу из попарных перемножений
+
+    function meshgrid_int(x, y) result(grid)
+        integer, intent(in), dimension(:) :: x, y
+        integer, dimension(size(x), size(y)) :: grid
+        do concurrent (i=1:size(x), j=1:size(y))
+            grid(i,j) = x(i) * y(j)
+        end do
+    end function
+
+    function meshgrid_real(x, y) result(grid)
+        real(mp), intent(in), dimension(:) :: x, y
+        real(mp), dimension(size(x), size(y)) :: grid
+        do concurrent (i=1:size(x), j=1:size(y))
+            grid(i,j) = x(i) * y(j)
+        end do
     end function
 
 end module

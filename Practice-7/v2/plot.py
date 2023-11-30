@@ -37,23 +37,12 @@ y1_re, y1_im = np.loadtxt('result.dat', skiprows=1).transpose()
 y1_abs = np.loadtxt('abs.dat')
 x1 = np.arange(0, y1_abs.size*step, step)
 
-#def dft(x, sign):
-#    N = len(x)
-#    n = np.arange(N)
-#    k = n.reshape((N, 1))
-#    e = np.exp(sign * 2j * np.pi * k * n / N)
-#    return np.dot(e, x) / np.sqrt(N)
-
-#y1 = dft(y0, sign=-1)
-#y1_re = y1.real
-#y1_im = y1.imag
-#y1_abs = abs(y1)
-
+# Рисуем график
 fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(7, 5), dpi=100)
-ax0.plot(x0, y0, label='Amplitude', color='#108BB4')
+ax0.plot(x0, y0, label='Исходный сигнал', color='#108BB4')
 ax0.legend()
-ax1.plot(x1, y1_re, label='Real part', color='#00FF99')
-ax1.plot(x1, y1_im, label='Imaginary part', color='#0099FF')
+ax1.plot(x1, y1_re, label='Вещественная часть', color='#00FF99')
+ax1.plot(x1, y1_im, label='Мнимая часть', color='#0099FF')
 #ax1.plot(x0, y1_abs, label='Absolute', color='#FFFFFF')
 ax1.legend()
 fig.savefig('plot.png', dpi=150)
