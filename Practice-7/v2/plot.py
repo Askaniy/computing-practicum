@@ -23,50 +23,38 @@ plt.rcParams |= {
     }
 
 
-def amplitude_generator():
-    sr = 100 # sampling rate
-    ts = 1. / sr # sampling interval
-    t = np.arange(0,1,ts)
-    freq = 1.
-    x = 3*np.sin(2*np.pi*freq*t)
-    freq = 4
-    x += np.sin(2*np.pi*freq*t)
-    freq = 7   
-    x += 0.5* np.sin(2*np.pi*freq*t)
-    return t, x
-
 # Генерируем сигнал
-x0, y0 = amplitude_generator()
+step = 0.01
+x0 = np.arange(0,1,step)
+y0 = 3*np.sin(2*np.pi*x0 * 1) + np.cos(2*np.pi*x0 * 4) + 0.5*np.sin(2*np.pi*x0 * 7)
 with open('data.dat', 'w') as file:
     file.write(f'# {len(x0)}\n')
     for y in y0:
         file.write(f'{y}\t0.\n')
 
 # Читаем спектр
-#y1_re, y1_im = np.loadtxt('result.dat').transpose()
-#y1_abs = np.loadtxt('abs.dat')
+y1_re, y1_im = np.loadtxt('result.dat', skiprows=1).transpose()
+y1_abs = np.loadtxt('abs.dat')
+x1 = np.arange(0, y1_abs.size*step, step)
 
-def dft(x, sign):
-    N = len(x)
-    n = np.arange(N)
-    k = n.reshape((N, 1))
-    e = np.exp(sign * 2j * np.pi * k * n / N)
-    return np.dot(e, x) / np.sqrt(N)
+#def dft(x, sign):
+#    N = len(x)
+#    n = np.arange(N)
+#    k = n.reshape((N, 1))
+#    e = np.exp(sign * 2j * np.pi * k * n / N)
+#    return np.dot(e, x) / np.sqrt(N)
 
-y1 = dft(y0, sign=-1)
-y1_re = y1.real
-y1_im = y1.imag
-y1_abs = abs(y1)
-
-#y0_ = dft(y1, sign=1)
+#y1 = dft(y0, sign=-1)
+#y1_re = y1.real
+#y1_im = y1.imag
+#y1_abs = abs(y1)
 
 fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(7, 5), dpi=100)
 ax0.plot(x0, y0, label='Amplitude', color='#108BB4')
-#ax0.plot(x0, y0_, label='Amplitude recalc', color='#B48B10')
 ax0.legend()
-ax1.plot(x0, y1_re, label='Real part', color='#00FF99')
-ax1.plot(x0, y1_im, label='Imaginary part', color='#0099FF')
+ax1.plot(x1, y1_re, label='Real part', color='#00FF99')
+ax1.plot(x1, y1_im, label='Imaginary part', color='#0099FF')
 #ax1.plot(x0, y1_abs, label='Absolute', color='#FFFFFF')
 ax1.legend()
 fig.savefig('plot.png', dpi=150)
-plt.show()
+#plt.show()
