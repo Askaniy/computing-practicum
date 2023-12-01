@@ -8,7 +8,7 @@ module my_math
     public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
     polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
     solve_quadratic_equation, get_abs_max_root, solve_polynomial, legendre_polynomial_roots, &
-    gaussian_quadrature_coefficients, meshgrid, discrete_fourier_transform
+    gaussian_quadrature_coefficients, meshgrid, discrete_fourier_transform, fast_fourier_transform
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -303,8 +303,38 @@ module my_math
     end function
 
     ! Задание 7: Быстрое преобразование Фурье
+    function fast_fourier_transform(array, sign) result(array1)
+        complex(mp), intent(in) :: array(:)
+        integer, intent(in) :: sign
+        complex(mp), allocatable :: array0(:), array1(:)
+        integer :: n
+        ! Расширение нулями входного массива до ближайшей степени двойки
+        n = 2**ceiling(log(real(size(array)))/log(2.))
+        allocate(array0(0:n-1))
+        allocate(array1(0:n-1))
+        array0 = 0
+        array0(:size(array)-1) = array
+        array1 = recursive_FFT(array0, sign) / sqrt(real(n))
+    end function
 
-    ! Дискретное преобразование Фурье
+    ! Рекурсивная часть быстрого преобразования Фурье
+    recursive function recursive_FFT(array0, sign) result(array1)
+        complex(mp), intent(in) :: array0(0:)
+        integer, intent(in) :: sign
+        complex(mp) :: array1(0:size(array0)-1), w(size(array0)/2)
+        integer :: n
+        n = size(array0)
+        if (n == 2) then
+            array1(0) = array0(0) + array0(1)
+            array1(1) = array0(0) - array0(1)
+        else
+            w = exp(sign * cmplx(0, 2) * pi / n * [(i, i=0,n/2-1)])
+            array1(0::2) = recursive_FFT(array0(:n/2-1) + array0(n/2:), sign)
+            array1(1::2) = recursive_FFT(w * (array0(:n/2-1) - array0(n/2:)), sign)
+        end if
+    end function
+
+    ! Дискретное преобразование Фурье, эталон для тестирования
     function discrete_fourier_transform(array0, sign) result(array1)
         complex(mp), intent(in) :: array0(:)
         integer, intent(in) :: sign

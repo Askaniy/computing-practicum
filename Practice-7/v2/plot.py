@@ -25,7 +25,7 @@ plt.rcParams |= {
 
 # Генерируем сигнал
 step = 0.01
-x0 = np.arange(0,1,step)
+x0 = np.arange(0,1.28,step)
 y0 = 3*np.sin(2*np.pi*x0 * 1) + np.cos(2*np.pi*x0 * 4) + 0.5*np.sin(2*np.pi*x0 * 7)
 with open('data.dat', 'w') as file:
     file.write(f'# {len(x0)}\n')
@@ -41,8 +41,8 @@ x1 = np.arange(0, y1_abs.size*step, step)
 fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(7, 5), dpi=100)
 ax0.plot(x0, y0, label='Исходный сигнал', color='#108BB4')
 ax0.legend()
-ax1.plot(x1, y1_re, label='Вещественная часть', color='#00FF99')
-ax1.plot(x1, y1_im, label='Мнимая часть', color='#0099FF')
+ax1.plot(x1, y1_re, label=r'$\mathrm{\mathbb{R}}$', color='#00FF99')
+ax1.plot(x1, y1_im, label=r'$\mathrm{\mathbb{C}}$', color='#0099FF')
 #ax1.plot(x0, y1_abs, label='Absolute', color='#FFFFFF')
 ax1.legend()
 fig.savefig('plot.png', dpi=150)

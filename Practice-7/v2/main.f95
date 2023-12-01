@@ -20,7 +20,7 @@ program quest7v2
     close(1)
     !call output('Получено', array)
     
-    result = discrete_fourier_transform(array, -1)
+    result = fast_fourier_transform(array, -1)
 
     open(1, file='result.dat')
         write(1,'("# ", i0)') size(result)
