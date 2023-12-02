@@ -1,11 +1,11 @@
-import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+from warnings import simplefilter
 
-# Скопированные настройки из другого проекта, TCT
+# Настройки форматирования
 
 # Filling empty space on a plot
-warnings.simplefilter('ignore', UserWarning)
+simplefilter('ignore', UserWarning)
 plt.rcParams['figure.autolayout'] = True
 
 # MatPlotLib custom theme
@@ -24,9 +24,8 @@ plt.rcParams |= {
 
 x1, y1 = np.loadtxt('result.dat').transpose()
 
-fig = plt.figure(figsize=(10, 10), dpi=100)
-ax = fig.add_subplot(111)
-ax.plot(x1, y1, label='result', color='#108BB4')
-ax.legend()
+fig, ax1 = plt.subplots(1, 1, figsize=(8, 6), dpi=100)
+ax1.set_title('Результат')
+ax1.plot(x1, y1, color='#108BB4')
 fig.savefig('plot.png', dpi=100)
-plt.show()
+#plt.show()
