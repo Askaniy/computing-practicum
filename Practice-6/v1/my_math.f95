@@ -17,7 +17,7 @@ module my_math
     end interface
 
     integer, private :: i, j, k
-    real(mp), parameter, private :: eps = tiny(0._mp) ! output accuracy
+    real(mp), parameter, private :: eps = epsilon(0._mp) ! output accuracy
     real(mp), parameter, private :: sqrt_eps = sqrt(eps) ! differentiation step
 
     contains
@@ -248,7 +248,7 @@ module my_math
                 use my_io, only: mp
                 real(mp), intent(in), dimension(:) :: x
                 real(mp), dimension(size(x)) :: y
-            end
+            end function
         end interface
         if (.not. present(iterations_limit)) then
             limit = 100
@@ -259,24 +259,25 @@ module my_math
         solution = 0
     end function
 
-    ! Вычисление матрицы Якоби (не протестировано)
+    ! Вычисление матрицы Якоби
     function differentiate(f, x) result(jacobian)
-        integer :: n
         real(mp), intent(in) :: x(:)
-        real(mp), dimension(size(x)) :: f1, f2, delta_i
+        real(mp), dimension(size(x)) :: f1, f2, delta_i, step
         real(mp), dimension(size(x), size(x)) :: jacobian
+        integer :: n
         interface
-            function f(x) result(y)
+            pure function f(x) result(y)
                 use my_io, only: mp
                 real(mp), intent(in), dimension(:) :: x
                 real(mp), dimension(size(x)) :: y
-            end
+            end function
         end interface
         n = size(x)
         do concurrent (i=1:n)
             delta_i = kronecker_delta(i, n)
-            f1 = f(x - delta_i * sqrt_eps)
-            f2 = f(x + delta_i * sqrt_eps)
+            step = delta_i * sqrt_eps
+            f1 = f(x - step)
+            f2 = f(x + step)
             jacobian(i,:) = (f2-f1) / (2*sqrt_eps)
         end do
     end function
@@ -568,22 +569,22 @@ module my_math
     ! Серия функций multiply. Принимает одномерные и двумерные вещественные массивы
     ! Пример использования: sqrt(sum(multiply(a, x) - b)**2) ! невязка
 
-    function multiply_1D_1D(a, b) result(c)
+    pure function multiply_1D_1D(a, b) result(c)
         real(mp), intent(in) :: a(:), b(:)
         real(mp) :: c
         c = dot_product(a, b)
     end function
 
-    function multiply_1D_2D(a, b) result(c)
+    pure function multiply_1D_2D(a, b) result(c)
         real(mp), intent(in) :: a(:), b(:,:)
         real(mp) :: c(size(a))
         c = matmul(a, transpose(b))
     end function
 
-    function multiply_2D_1D(a, b, mode) result(c)
+    pure function multiply_2D_1D(a, b, mode) result(c)
         real(mp), intent(in) :: a(:,:), b(:)
         real(mp) :: c(size(b))
-        character(*), optional :: mode
+        character(*), intent(in), optional :: mode
         if (.not. present(mode)) then
             c = matmul(transpose(a), b)
         elseif (mode == 'tridiagonal') then
@@ -598,11 +599,11 @@ module my_math
         end if
     end function
 
-    function multiply_2D_2D(a, b, mode) result(c)
+    pure function multiply_2D_2D(a, b, mode) result(c)
         real(mp), intent(in) :: a(:,:), b(:,:)
         real(mp), allocatable :: c(:,:)
-        character(*), optional :: mode
-        integer :: m
+        character(*), intent(in), optional :: mode
+        integer :: m, j
         m = size(a, dim=2)
         if (.not. present(mode)) then
             c = transpose(matmul(b, a))

@@ -30,7 +30,7 @@ module my_io
 
     interface output
         module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D, &
-            output_complex0D, output_complex1D, output_complex2D
+            output_complex0D, output_complex1D, output_complex2D, output_bool0D, output_bool1D
     end interface
 
     contains
@@ -552,6 +552,23 @@ module my_io
                     &                                  "+", f'//str(l)//'.'//str(dp)//', "i")))') a
                 end if
             end block
+        end if
+    end subroutine
+
+    subroutine output_bool0D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a
+        write(*,'("'//text//'", 1x, l)') a
+    end subroutine
+
+    subroutine output_bool1D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a(:)
+        if (size(a) == 1) then
+            call output_bool0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, l)$)') a
+            write(*,*)
         end if
     end subroutine
 
