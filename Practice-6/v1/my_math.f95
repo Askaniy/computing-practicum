@@ -1,36 +1,27 @@
 module my_math
-    use my_consts
     use my_io
     !use, intrinsic :: ieee_arithmetic
     implicit none
 
-    private
-    public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
-    polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
-    solve_quadratic_equation, get_abs_max_root, solve_polynomial, legendre_polynomial_roots, &
-    gaussian_quadrature_coefficients
+    ! Вспомогательные функции
+    private spline_vectors, recursive_FFT, legendre_polynomial_roots, legendre_polynomial_coefficients, &
+            solve_polynomial_directly, get_abs_max_root, polynomial_division, isdiagdominant, &
+            multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D, meshgrid_int, meshgrid_real
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
     end interface
+    
+    interface meshgrid
+        module procedure meshgrid_int, meshgrid_real
+    end interface
 
-    integer :: i, j, k
+    integer, private :: i, j, k
     real(mp), parameter, private :: eps = tiny(0._mp) ! output accuracy
     real(mp), parameter, private :: sqrt_eps = sqrt(eps) ! differentiation step
 
     contains
 
-
-    pure function dist(a, b) ! возвращает евклидову метрику
-        real(mp), intent(in) :: a(:), b(:)
-        real(mp) :: dist
-        dist = sqrt(sum(a - b)**2)
-    end function
-
-    pure logical function isdiagdominant(a) ! возвращает .true., если у матрицы имеется диагональное преобладание
-        real(mp), intent(in) :: a(:,:)
-        isdiagdominant = all([( ( 2*abs(a(j,j)) >= sum(abs(a(:,j))) ), j=1,size(a, dim=2) )])
-    end function
 
     ! Задание 2: интерполирование полиномами
     function polynomial_interp(grid, q, a, b) result(interpolated)
@@ -254,8 +245,8 @@ module my_math
         integer :: n, limit
         interface
             function f(x) result(y)
-                use my_consts, only: mp
-                real(mp), intent(in) :: x(:)
+                use my_io, only: mp
+                real(mp), intent(in), dimension(:) :: x
                 real(mp), dimension(size(x)) :: y
             end
         end interface
@@ -275,9 +266,9 @@ module my_math
         real(mp), dimension(size(x)) :: f1, f2, delta_i
         real(mp), dimension(size(x), size(x)) :: jacobian
         interface
-            pure function f(x) result(y)
-                use my_consts, only: mp
-                real(mp), intent(in) :: x(:)
+            function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in), dimension(:) :: x
                 real(mp), dimension(size(x)) :: y
             end
         end interface
@@ -296,6 +287,51 @@ module my_math
         real(mp), dimension(n) :: array
         array(:) = 0
         array(index) = 1
+    end function
+
+    ! Задание 7: Быстрое преобразование Фурье
+    ! Может быть ускорено в два раза, если предрассчитывать коэффициенты w
+    function fast_fourier_transform(array, sign) result(array1)
+        complex(mp), intent(in) :: array(:)
+        integer, intent(in) :: sign
+        complex(mp), allocatable :: array0(:), array1(:)
+        integer :: n
+        ! Расширение нулями входного массива до ближайшей степени двойки
+        n = 2**ceiling(log(real(size(array)))/log(2.))
+        allocate(array0(0:n-1))
+        allocate(array1(0:n-1))
+        array0 = 0
+        array0(:size(array)-1) = array
+        array1 = recursive_FFT(array0, sign) / sqrt(real(n))
+    end function
+
+    ! Рекурсивная часть быстрого преобразования Фурье
+    recursive function recursive_FFT(array0, sign) result(array1)
+        complex(mp), intent(in) :: array0(0:)
+        integer, intent(in) :: sign
+        complex(mp) :: array1(0:size(array0)-1), w(size(array0)/2)
+        integer :: n
+        n = size(array0)
+        if (n == 2) then
+            array1(0) = array0(0) + array0(1)
+            array1(1) = array0(0) - array0(1)
+        else
+            w = exp(sign * cmplx(0, 2) * pi / n * [(i, i=0,n/2-1)])
+            array1(0::2) = recursive_FFT(array0(:n/2-1) + array0(n/2:), sign)
+            array1(1::2) = recursive_FFT(w * (array0(:n/2-1) - array0(n/2:)), sign)
+        end if
+    end function
+
+    ! Дискретное преобразование Фурье, эталон для тестирования
+    function discrete_fourier_transform(array0, sign) result(array1)
+        complex(mp), intent(in) :: array0(:)
+        integer, intent(in) :: sign
+        complex(mp) :: array1(size(array0)), w(size(array0), size(array0))
+        integer :: n, nk(size(array0))
+        n = size(array0)
+        nk = [(i, i=0,n-1)]
+        w = exp(sign * cmplx(0, 2) * pi / n * meshgrid(nk, nk))
+        array1 = matmul(array0, w) / sqrt(real(n))
     end function
 
     ! Задание 8: метод численного интегрирования Гаусса
@@ -450,6 +486,36 @@ module my_math
         !r = b(n-1) * x0 + a(n) ! остаток
     end function
 
+    ! Задание 9: системы обыкновенных дифференциальных уравнений
+
+    ! Интуитивное решение ДУ для тестирования
+    function ode_simple(t, x0) result(x)
+        real(mp), intent(in) :: t(:), x0(:)
+        real(mp) :: x(size(x0), size(t))
+        call random_number(x)
+    end function
+
+    ! Метод Рунге-Кутты 4-го порядка
+    function ode_runge_kutta_4(t, x0) result(x)
+        real(mp), intent(in) :: t(:), x0(:)
+        real(mp) :: x(size(x0), size(t))
+        call random_number(x)
+    end function
+
+    ! Экстраполяционный метод Адамса
+    function ode_adams_extrap(t, x0) result(x)
+        real(mp), intent(in) :: t(:), x0(:)
+        real(mp) :: x(size(x0), size(t))
+        call random_number(x)
+    end function
+
+    ! Интерполяционный метод Адамса
+    function ode_adams_interp(t, x0) result(x)
+        real(mp), intent(in) :: t(:), x0(:)
+        real(mp) :: x(size(x0), size(t))
+        call random_number(x)
+    end function
+
 
     ! Серия функций integrate. Принимает функцию, интервал и число промежутков
     ! Пример использования: integrate(f, 0, 10, 100, 'rectangle')
@@ -572,6 +638,19 @@ module my_math
         end if
     end function
 
+    ! Возвращает евклидову метрику
+    pure function dist(a, b)
+        real(mp), intent(in) :: a(:), b(:)
+        real(mp) :: dist
+        dist = sqrt(sum(a - b)**2)
+    end function
+
+    ! Возвращает .true., если у матрицы имеется диагональное преобладание
+    pure logical function isdiagdominant(a) 
+        real(mp), intent(in) :: a(:,:)
+        isdiagdominant = all([( ( 2*abs(a(j,j)) >= sum(abs(a(:,j))) ), j=1,size(a, dim=2) )])
+    end function
+
     ! Сжимает пятидиагональную матрицу (не используется)
     function compressed(matrix)
         real(mp), intent(in) :: matrix(:,:)
@@ -607,6 +686,24 @@ module my_math
         real(mp), intent(in) :: array(:)
         real(mp) :: diffs(size(array)-1)
         diffs = array(2:size(array)) - array(1:size(array)-1)
+    end function
+
+    ! Серия функций meshgrid: создаёт матрицу из попарных перемножений
+
+    function meshgrid_int(x, y) result(grid)
+        integer, intent(in), dimension(:) :: x, y
+        integer, dimension(size(x), size(y)) :: grid
+        do concurrent (i=1:size(x), j=1:size(y))
+            grid(i,j) = x(i) * y(j)
+        end do
+    end function
+
+    function meshgrid_real(x, y) result(grid)
+        real(mp), intent(in), dimension(:) :: x, y
+        real(mp), dimension(size(x), size(y)) :: grid
+        do concurrent (i=1:size(x), j=1:size(y))
+            grid(i,j) = x(i) * y(j)
+        end do
     end function
 
 end module

@@ -1,10 +1,13 @@
 module my_io
-    use my_consts
     implicit none
 
     private
     public str, input, output, isspacesymbol, isspace, lower, upper, &
         swap, read_argument, import_grid, import_vector, import_matrix, tlen
+    
+    integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int 4 байта всегда)
+    integer, parameter, public :: dp = 4 ! "decimal places", число знаков после запятой в форматированном выводе 
+    real(mp), parameter, public :: pi = 4*atan(1.0_mp)
 
     integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
@@ -26,7 +29,8 @@ module my_io
     end interface
 
     interface output
-        module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D
+        module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D, &
+            output_complex0D, output_complex1D, output_complex2D
     end interface
 
     contains
@@ -492,6 +496,60 @@ module my_io
                 else
                     write(*,'("'//text//'", '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'/,&
                     &('//str(len_text)//'x, '//str(sz_x)//'f'//str(l)//'.'//str(dp)//'))') a
+                end if
+            end block
+        end if
+    end subroutine
+
+    subroutine output_complex0D(text, a)
+        character(*), intent(in) :: text
+        complex(mp), intent(in) :: a
+        write(*,'("'//text//'", 1x, f0.'//str(dp)//', "+", f0.'//str(dp)//', "i")') a
+    end subroutine
+
+    subroutine output_complex1D(text, a)
+        character(*), intent(in) :: text
+        complex(mp), intent(in) :: a(:)
+        if (size(a) == 1) then
+            call output_complex0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, f0.'//str(dp)//', "+", f0.'//str(dp)//', "i")$)') a
+            write(*,*)
+        end if
+    end subroutine
+
+    subroutine output_complex2D(text, a)
+        character(*), intent(in) :: text
+        complex(mp), intent(in) :: a(:,:)
+        integer :: sz_x, sz_y
+        sz_x = size(a, dim=1)
+        sz_y = size(a, dim=2)
+        if (sz_x == 1) then
+            call output_complex1D(text, reshape(a, [sz_y]))
+        else if (sz_y == 1) then
+            call output_complex1D(text, reshape(a, [sz_x]))
+        else
+            block
+                integer :: l, l_ij, i, j, len_text
+                len_text = tlen(text)
+                l = 0
+                do i = 1,sz_x
+                    do j = 1,sz_y
+                        l_ij = max(len(str(floor(real(a(i,j))))), len(str(floor(aimag(a(i,j))))))
+                        if (l < l_ij) l = l_ij
+                    end do
+                end do
+                l = l + 2 + dp
+                if (len_text == 0) then
+                    write(*,'('//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                    "+", f'//str(l)//'.'//str(dp)//', "i")/,&
+                    &        ('//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                    "+", f'//str(l)//'.'//str(dp)//', "i")))') a
+                else
+                    write(*,'("'//text//'", '//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                                  "+", f'//str(l)//'.'//str(dp)//', "i")/,&
+                    &('//str(len_text)//'x, '//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                                  "+", f'//str(l)//'.'//str(dp)//', "i")))') a
                 end if
             end block
         end if

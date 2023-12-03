@@ -20,11 +20,11 @@ $(name): $(obj)
 		$(comp) -c $(opt) $<
 		touch $@
 
-$(name).o: my_consts.mod my_io.mod my_math.mod
+$(name).o: my_io.mod my_math.mod
 
 result: $(name)
 		time -v -o time.log ./$(name) $(mode)
-# 		python3 -u plot.py
+#		python3 -u plot.py
 
 clean:
 		rm -f *.o *.mod $(name) time.log
