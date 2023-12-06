@@ -45,16 +45,16 @@ program quest6v1
     use functions
     implicit none
     
-    real(mp), allocatable :: initial_vector(:), jacobian(:,:)
+    real(mp), allocatable :: initial_vector(:), solution(:)
 
-    initial_vector = [11, 12, 13]
-    call output('res =', test_func_3(initial_vector))
+    initial_vector = [10, 10, 10]
+    call output('initial vector =', test_func_3(initial_vector))
 
-    !open(1, file='result.dat')
-    !    write(1,'(f9.'//str(dp)//')') newton(test_func_3, initial_vector)
-    !close(1)
+    solution = newton(test_func_3, initial_vector)
+    call output('solution =', solution)
 
-    jacobian = differentiate(test_func_3, initial_vector)
-    call output('Якобиан =', jacobian)
+    open(1, file='result.dat')
+        write(1,'(f9.'//str(dp)//')') solution
+    close(1)
     
 end program

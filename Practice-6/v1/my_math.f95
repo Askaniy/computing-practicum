@@ -6,6 +6,7 @@ module my_math
     ! Вспомогательные функции
     private spline_vectors, recursive_FFT, legendre_polynomial_roots, legendre_polynomial_coefficients, &
             solve_polynomial_directly, get_abs_max_root, polynomial_division, isdiagdominant, &
+            square_jacobi_matrix, &
             multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D, meshgrid_int, meshgrid_real
     
     interface multiply
@@ -255,15 +256,14 @@ module my_math
         else
             limit = iterations_limit
         end if
-        write(*,*) limit
         solution = 0
     end function
 
-    ! Вычисление матрицы Якоби
-    function differentiate(f, x) result(jacobian)
+    ! Вычисление квадратной матрицы Якоби
+    function square_jacobi_matrix(f, x) result(jacobi_matrix)
         real(mp), intent(in) :: x(:)
-        real(mp), dimension(size(x)) :: f1, f2, delta_i, step
-        real(mp), dimension(size(x), size(x)) :: jacobian
+        real(mp), dimension(size(x)) :: f1, f2, step
+        real(mp), dimension(size(x), size(x)) :: jacobi_matrix
         integer :: n
         interface
             pure function f(x) result(y)
@@ -274,11 +274,10 @@ module my_math
         end interface
         n = size(x)
         do concurrent (i=1:n)
-            delta_i = kronecker_delta(i, n)
-            step = delta_i * sqrt_eps
+            step = kronecker_delta(i, n) * sqrt_eps
             f1 = f(x - step)
             f2 = f(x + step)
-            jacobian(i,:) = (f2-f1) / (2*sqrt_eps)
+            jacobi_matrix(i,:) = (f2-f1) / (2*sqrt_eps)
         end do
     end function
 
@@ -345,8 +344,9 @@ module my_math
         integer :: n
         n = size(roots)
         ! рекуррентно конструируем матрицу коэффициентов СЛУ
-        t_matrix(:,0) = roots
-        do k=1,n-1
+        t_matrix(:,0) = 1
+        t_matrix(:,1) = roots
+        do k=2,n-1
             t_matrix(:,k) = t_matrix(:,k-1) * roots
         end do
         ! конструируем вектор результатов СЛУ
