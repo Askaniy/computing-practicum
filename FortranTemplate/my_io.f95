@@ -5,7 +5,7 @@ module my_io
     public str, zfill, input, output, isspacesymbol, isspace, lower, upper, &
         swap, read_argument, import_grid, import_vector, import_matrix, tlen
     
-    integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int 4 байта всегда)
+    integer, parameter, public :: mp = 8 ! "my precision", число байт для типа real (для int 4 байта всегда)
     integer, parameter, public :: dp = 4 ! "decimal places", число знаков после запятой в форматированном выводе 
     real(mp), parameter, public :: pi = 4*atan(1.0_mp)
 

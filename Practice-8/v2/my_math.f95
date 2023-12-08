@@ -476,20 +476,21 @@ module my_math
         real(mp) :: x1, y(1:size(a)-1), b(1:size(a)-1)
         integer :: n, limit
         if (.not. present(iterations_limit)) then
-            limit = 100
+            limit = 100000 ! нужно 20000 итераций для mp=8, n=31
         else
             limit = iterations_limit
         end if
         n = size(a) - 1 ! степень многочлена
         b = a(1:) / a(0) ! приведённые коэффициенты
-        call random_number(y) ! n начальных значений
+        y = 1 ! call random_number(y) для n начальных значений хуже
         do i=1,limit
             x1 = - dot_product(y, b) ! x1 тут - буферная переменная
             y(2:n) = y(1:n-1) ! сдвиг: новый элемент в начало
             y(1) = x1
-            if (abs(y(1)/y(2) - y(2)/y(3)) < eps) exit
+            x1 = y(1)/y(2)
+            if (abs(x1 - y(2)/y(3)) < eps) exit
         end do
-        x1 = y(1)/y(2)
+        !write(*,*) 'Для поиска корня '//str(x1)//' потребовалось '//str(i-1)//' итераций'
     end function
 
     ! Делит `P(x) = a_0 x^n + ... + a_n` на `x - x0` методом Горнера
@@ -681,7 +682,7 @@ module my_math
     function compressed(matrix)
         real(mp), intent(in) :: matrix(:,:)
         real(mp) :: compressed(5, size(matrix, dim=2))
-        integer(mp) :: n
+        integer :: n
         n = size(matrix, dim=2)
         compressed = 0
         compressed(1, 3:n) = [( matrix(i,i+2), i=1,n-2 )]
