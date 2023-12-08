@@ -3,7 +3,6 @@
 program questNvN
     use my_io
     use my_math
-    use my_consts
     implicit none
     
     integer :: i, j, n
