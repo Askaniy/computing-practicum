@@ -1,10 +1,13 @@
 module my_io
-    use my_consts
     implicit none
 
     private
     public str, input, output, isspacesymbol, isspace, lower, upper, &
         swap, read_argument, import_grid, import_vector, import_matrix, tlen
+    
+    integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int 4 байта всегда)
+    integer, parameter, public :: dp = 4 ! "decimal places", число знаков после запятой в форматированном выводе 
+    real(mp), parameter, public :: pi = 4*atan(1.0_mp)
 
     integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
@@ -27,7 +30,7 @@ module my_io
 
     interface output
         module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D, &
-            output_complex0D, output_complex1D, output_complex2D
+            output_complex0D, output_complex1D, output_complex2D, output_bool0D, output_bool1D
     end interface
 
     contains
@@ -549,6 +552,23 @@ module my_io
                     &                                  "+", f'//str(l)//'.'//str(dp)//', "i")))') a
                 end if
             end block
+        end if
+    end subroutine
+
+    subroutine output_bool0D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a
+        write(*,'("'//text//'", 1x, l)') a
+    end subroutine
+
+    subroutine output_bool1D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a(:)
+        if (size(a) == 1) then
+            call output_bool0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, l)$)') a
+            write(*,*)
         end if
     end subroutine
 

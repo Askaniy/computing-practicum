@@ -6,7 +6,7 @@ module functions
     implicit none
 
     integer :: i, j, n
-    real(mp) :: matrix3(3,3) = reshape([2, 1, 3, -1, 1, 0, -1, 1, 0], [3, 3])
+    real(mp) :: matrix3(3,3) = reshape([2, 1, 3, -1, 1, 1, -1, 1, 0], [3, 3])
 
     contains
 
@@ -14,7 +14,7 @@ module functions
         real(mp), intent(in), dimension(:) :: x
         real(mp), dimension(size(x)) :: y
         do concurrent (i=1:size(x))
-            y(i) = x(i)**i - 2 ! решения: (2, +-2^(1/2), 2^(1/3))
+            y(i) = x(i)**i - 2 ! решения: [2, +-2^(1/2), 2^(1/3)]
         end do
     end function
 
@@ -37,6 +37,14 @@ module functions
         y = multiply(matrix3, x)
     end function
 
+    pure function test_func_4(x) result(y) ! решения: [0, -1, -1], [0, 1, 1]
+        real(mp), intent(in), dimension(:) :: x
+        real(mp), dimension(size(x)) :: y
+        y(1) = x(1)*x(1) + x(2)*x(2) - 1
+        y(2) = x(2)*x(2) - x(3)*x(3)
+        y(3) = x(1) - x(2) + x(3)
+    end function
+
 end module
 
 program quest6v1
@@ -47,11 +55,11 @@ program quest6v1
     
     real(mp), allocatable :: initial_vector(:), solution(:)
 
-    initial_vector = [10, 10, 10]
-    call output('initial vector =', test_func_3(initial_vector))
+    initial_vector = [20, 20, 20]
 
-    solution = newton(test_func_3, initial_vector)
-    call output('solution =', solution)
+    solution = newton(test_func_4, initial_vector)
+    call output('решение X =', solution)
+    call output('|F(X)| =', length(test_func_4(solution)))
 
     open(1, file='result.dat')
         write(1,'(f9.'//str(dp)//')') solution

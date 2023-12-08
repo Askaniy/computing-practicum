@@ -1,15 +1,11 @@
-import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-# Скопированные настройки из другого проекта, TCT
+# Определение папки с запущенным скриптом
+path = Path(__file__).parent.resolve()
 
-# Filling empty space on a plot
-warnings.simplefilter('ignore', UserWarning)
-plt.rcParams['figure.autolayout'] = True
-
-# MatPlotLib custom theme
-# https://matplotlib.org/stable/tutorials/introductory/customizing.html
+# Настройки форматирования
 text_color = '#FFFFFF'
 muted_color = '#A3A3A3'
 highlight_color = '#5A5A5A'
@@ -25,14 +21,21 @@ plt.rcParams |= {
 def test_func_1(x, y, z):
     return np.array([x, y*y, z*z*z]) - 2
 
-def test_func_2(x, y, z):
+def test_func_3(x, y, z):
     return np.array([2*x+y+3*z, -x+y, -x+y])
 
-solution = np.loadtxt('result.dat')
+def test_func_4(x, y, z): # default
+    return np.array([x*x + y*y - 1, y*y - z*z, x - y + z])
 
-linspace = np.linspace(-10, 10, 10)
+solution = np.loadtxt(path/'result.dat')
+
+cube_size = 5
+arrow_scale = cube_size / 10
+half_size = cube_size // 2
+
+linspace = np.linspace(-half_size, half_size, 7)
 x, y, z = np.meshgrid(linspace, linspace, linspace)
-u, v, w = test_func_2(x, y, z)
+u, v, w = test_func_4(x, y, z)
 lengths = np.sqrt(u**2 + v**2 + w**2)
 lengths /= np.max(lengths)
 lengths = lengths.flatten()
@@ -43,12 +46,16 @@ colors[:,3] = lengths # alpha
 
 fig = plt.figure(figsize=(10, 10), dpi=100)
 ax = fig.add_subplot(111, projection='3d')
-ax.quiver(x, y, z, u, v, w, length=2, normalize=True, color=colors, label='Векторное поле')
-ax.plot(linspace, linspace, -linspace, color='#108BB4', label='Линия решений')
-ax.scatter3D(*solution, color='#00FF00', label='Решение')
+ax.quiver(x, y, z, u, v, w, length=arrow_scale, normalize=True, color=colors, label='Векторное поле')
+ax.scatter3D(0, -1, -1, color='#00FF00', label='f(0, -1, -1) = 0')
+ax.scatter3D(0, 1, 1, color='#00FF00', label='f(0, 1, 1) = 0')
+ax.scatter3D(*solution, color='#00FFFF', label='Решение')
 ax.set_xlabel('X axis')
 ax.set_ylabel('Y axis')
 ax.set_zlabel('Z axis')
 ax.legend()
-fig.savefig('plot.png', dpi=100)
+ax.view_init(elev=8, azim=-8, roll=0)
+
+fig.tight_layout()
+fig.savefig(path/'plot.png', dpi=120)
 plt.show()

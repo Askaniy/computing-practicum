@@ -41,34 +41,37 @@ module my_math
     end function
 
     ! Задание 3: решение СЛУ методом Гаусса
-    function solve_sle(a0, b0, mode) result(x)
+    ! Режим определяется первой буквой из вариантов: gauss, jordan, mainch
+    ! По умолчанию - выбор ведущего элемента (mainch)
+    function solve_sle(a0, b0, mode0) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
         real(mp) :: a(size(b0)+1,size(b0)), x(size(b0))
         integer :: n, lead
-        character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'mainch'
+        character(*), optional :: mode0
+        character(1) :: mode
+        if (.not. present(mode0)) then
+            mode = 'm' ! (mainch)
+        else
+            mode = mode0(1)
         end if
         n = size(b0) ! размер СЛУ
         a(:n,:) = a0
         a(n+1,:) = b0
-        !call output('k=0, a =', a)
         do k = 1,n ! переход к треугольной матрице
-            if (mode == 'mainch') then ! выбор ведущего элемента
+            if (mode == 'm') then ! выбор ведущего элемента (mainch)
                 lead =  maxloc(abs(a(k,k:) / maxval(a(:,k:), dim=1)), dim=1) + k-1
                 if (lead /= k) then
                     call swap(a(:,k), a(:,lead))
-                    write(*,*) 'Строка '//str(lead)//' теперь ведущая'
+                    !write(*,*) 'Строка '//str(lead)//' теперь ведущая'
                 end if
             end if
-            if (abs(a(k,k)) < eps) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
+            !if (abs(a(k,k)) < eps) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
             a(k:,k) = a(k:,k) / a(k,k)
             do concurrent (j=k+1:n)
                 a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
             end do
-            !call output('k='//str(k)//', a =', a)
         end do
-        if (mode == 'jordan') then
+        if (mode == 'j') then ! (jordan)
             do concurrent (j=n:1:-1)
                 a(n+1,1:j-1) = a(n+1,1:j-1) - a(j,1:j-1) * a(n+1,j)
             end do
@@ -82,64 +85,70 @@ module my_math
     end function
 
     ! Задание 4: решение СЛУ с диагональным преобладанием итерационными методами
-    function solve_diagdominant_sle(a, b, mode) result(x)
+    ! Режим определяется первой буквой из вариантов: jacobi, seidel, relax
+    ! По умолчанию - метод релаксации (relax)
+    function solve_diagdominant_sle(a, b, mode0) result(x)
         real(mp), intent(in) :: a(:,:), b(:)
         real(mp) :: x(size(b))
         integer :: n
-        character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'relax'
+        character(*), optional :: mode0
+        character(1) :: mode
+        if (.not. present(mode0)) then
+            mode = 'r' ! (relax)
+        else
+            mode = mode0(1)
         end if
         if (.not. isdiagdominant(a)) stop 'Матрица не имеет диагонального преобладания!'
         n = size(b) ! размер СЛУ
-        if (mode == 'jacobi') then ! метод Якоби
-            block
-                real(mp) :: x0(n), g(n), d_z(n,n), d_rev(n,n)
-                x0 = b ! произвольно
-                d_z = 0 ! матрица для хранения D и Z, сначала D (диагональ A)
-                d_rev = 0 ! матрица для хранения D^(-1)
-                do concurrent (j=1:n)
-                    d_z(j,j) = a(j,j)
-                    d_rev(j,j) = 1.0 / a(j,j)
-                end do
-                d_z = multiply(d_rev, d_z-a) ! теперь Z
-                g = multiply(d_rev, b)
-                do
-                    x = matmul(d_z, x0) + g ! почему-то multiply не работает
-                    if (dist(x0, x) < eps) exit
-                    x0 = x
-                end do
-            end block
-        else if (mode == 'seidel') then ! метод Зейделя
-            block
-                real(mp) :: x0(n), p_j(n)
-                x0 = b ! произвольно
-                do
-                    do j=1,n
-                        p_j = -a(:,j) / a(j,j)
-                        x(j) = dot_product(p_j(1:j-1), x(1:j-1)) + dot_product(p_j(j+1:n), x0(j+1:n)) + b(j)/a(j,j)
+        select case (mode)
+            case ('j') ! метод Якоби
+                block
+                    real(mp) :: x0(n), g(n), d_z(n,n), d_rev(n,n)
+                    x0 = b ! произвольно
+                    d_z = 0 ! матрица для хранения D и Z, сначала D (диагональ A)
+                    d_rev = 0 ! матрица для хранения D^(-1)
+                    do concurrent (j=1:n)
+                        d_z(j,j) = a(j,j)
+                        d_rev(j,j) = 1.0 / a(j,j)
                     end do
-                    if (dist(x0, x) < eps) exit
-                    x0 = x
-                end do
-            end block
-        else if (mode == 'relax') then ! метод релаксации
-            block
-                real(mp) :: p(n,n), q(n)
-                integer :: max_index
-                do j=1,n
-                    p(:,j) = -a(:,j) / a(j,j)
-                    q(j) = b(j) / a(j,j) ! вектор невязок
-                end do
-                x = 0 ! обязательно
-                do
-                    max_index = maxloc(abs(q), dim=1)
-                    x(max_index) = x(max_index) + q(max_index)
-                    if (abs(q(max_index)) < eps) exit
-                    q = q + p(max_index,:) * q(max_index)
-                end do
-            end block
-        end if
+                    d_z = multiply(d_rev, d_z-a) ! теперь Z
+                    g = multiply(d_rev, b)
+                    do
+                        x = matmul(d_z, x0) + g ! почему-то multiply не работает
+                        if (dist(x0, x) < eps) exit
+                        x0 = x
+                    end do
+                end block
+            case ('s') ! метод Зейделя
+                block
+                    real(mp) :: x0(n), p_j(n)
+                    x0 = b ! произвольно
+                    do
+                        do j=1,n
+                            p_j = -a(:,j) / a(j,j)
+                            x(j) = dot_product(p_j(1:j-1), x(1:j-1)) + dot_product(p_j(j+1:n), x0(j+1:n)) + b(j)/a(j,j)
+                        end do
+                        if (dist(x0, x) < eps) exit
+                        x0 = x
+                    end do
+                end block
+            case ('r') ! метод релаксации
+                block
+                    real(mp) :: p(n,n), q(n)
+                    integer :: max_index
+                    do j=1,n
+                        p(:,j) = -a(:,j) / a(j,j)
+                        q(j) = b(j) / a(j,j) ! вектор невязок
+                    end do
+                    x = 0 ! обязательно
+                    do
+                        max_index = maxloc(abs(q), dim=1)
+                        x(max_index) = x(max_index) + q(max_index)
+                        if (abs(q(max_index)) < eps) exit
+                        q = q + p(max_index,:) * q(max_index)
+                    end do
+                end block
+        end select
     end function
 
     ! Задание 5: решение СЛУ методом пятиточечной прогонки
@@ -239,13 +248,14 @@ module my_math
     end subroutine
 
     ! Задание 6: многомерный метод Ньютона
-    function newton(f, initial_vector, iterations_limit) result(solution)
+    function newton(f, initial_vector, iterations_limit) result(x1)
         real(mp), intent(in) :: initial_vector(:)
         integer, intent(in), optional :: iterations_limit
-        real(mp), dimension(size(initial_vector)) :: solution
-        integer :: n, limit
+        real(mp), dimension(size(initial_vector)) :: x0, x1
+        real(mp), dimension(size(initial_vector), size(initial_vector)) :: jacobi_matrix
+        integer :: limit
         interface
-            function f(x) result(y)
+            pure function f(x) result(y)
                 use my_io, only: mp
                 real(mp), intent(in), dimension(:) :: x
                 real(mp), dimension(size(x)) :: y
@@ -256,7 +266,14 @@ module my_math
         else
             limit = iterations_limit
         end if
-        solution = 0
+        x0 = initial_vector
+        do i = 1,limit
+            !call output('iteration '//str(i)//': x0 =', x0)
+            jacobi_matrix = square_jacobi_matrix(f, x0)
+            x1 = solve_sle(jacobi_matrix, multiply(jacobi_matrix, x0) - f(x0))
+            if (all(abs(x1 - x0) < eps)) exit
+            x0 = x1
+        end do
     end function
 
     ! Вычисление квадратной матрицы Якоби
@@ -639,11 +656,18 @@ module my_math
         end if
     end function
 
+    ! Возвращает длину вектора
+    pure function length(a)
+        real(mp), intent(in) :: a(:)
+        real(mp) :: length
+        length = sqrt(sum(a**2))
+    end function
+
     ! Возвращает евклидову метрику
     pure function dist(a, b)
         real(mp), intent(in) :: a(:), b(:)
         real(mp) :: dist
-        dist = sqrt(sum(a - b)**2)
+        dist = length(b - a)
     end function
 
     ! Возвращает .true., если у матрицы имеется диагональное преобладание
@@ -662,8 +686,8 @@ module my_math
         compressed(1, 3:n) = [( matrix(i,i+2), i=1,n-2 )]
         compressed(2, 2:n) = [( matrix(i,i+1), i=1,n-1 )]
         compressed(3, 1:n) = [( matrix(i,i),   i=1,n   )]
-        compressed(4, 1:n-1) = [( matrix(i,i-1), i=2,n   )]
-        compressed(5, 1:n-2) = [( matrix(i,i-2), i=3,n   )]
+        compressed(4, 1:n-1) = [( matrix(i,i-1), i=2,n )]
+        compressed(5, 1:n-2) = [( matrix(i,i-2), i=3,n )]
     end function
 
     ! Бинарный поиск нижнего индекса по сортированному массиву
