@@ -2,7 +2,7 @@ module my_io
     implicit none
 
     private
-    public str, input, output, isspacesymbol, isspace, lower, upper, &
+    public str, zfill, input, output, isspacesymbol, isspace, lower, upper, &
         swap, read_argument, import_grid, import_vector, import_matrix, tlen
     
     integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int 4 байта всегда)
@@ -576,18 +576,21 @@ module my_io
     ! Серия функций обработки строк, функционал близок к аналогам на языке Python
     ! Вдохновлено https://github.com/certik/fortran-utils/blob/master/src/utils.f90
 
-    pure logical function isspacesymbol(char) ! возвращает .true. на пробельные символы space (32) и tab (9)
+    ! Возвращает .true. на пробельные символы space (32) и tab (9)
+    pure logical function isspacesymbol(char)
         character, intent(in) :: char
         isspacesymbol = (iachar(char) == 32 .or. iachar(char) == 9)
     end function
-    
-    pure logical function isspace(string) ! возвращает .true., если вся строка из пробельных символов или пуста
+
+    ! Возвращает .true., если вся строка из пробельных символов или пуста
+    pure logical function isspace(string)
         character(*), intent(in) :: string
         integer :: i
         isspace = all([(isspacesymbol(string(i:i)), i=1,len(string))])
     end function
 
-    pure function tlen(string) result(sz) ! возвращает длину строки, считая непечатные байты за половину символа
+    ! Возвращает длину строки, считая непечатные байты за половину символа
+    pure function tlen(string) result(sz)
         character(*), intent(in) :: string
         integer :: i, sz
         sz = len(string) * 2
@@ -597,7 +600,8 @@ module my_io
         sz = sz / 2
     end function
 
-    pure function lower(s) result(t) ! Возвращает строчку строчными латинскими символами
+    ! Возвращает строчку строчными латинскими символами
+    pure function lower(s) result(t)
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
@@ -610,7 +614,8 @@ module my_io
         end do
     end function
 
-    pure function upper(s) result(t) ! Возвращает строчку заглавными латинскими символами
+    ! Возвращает строчку заглавными латинскими символами
+    pure function upper(s) result(t)
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
@@ -621,6 +626,13 @@ module my_io
                 t(i:i) = char(ichar(t(i:i)) + diff)
             end if
         end do
+    end function
+
+    ! Расширяет нулями влево целое число
+    pure function zfill(i, n) result(s)
+        integer, intent(in) :: i, n
+        character(max(n, str_int_len(i))) :: s
+        write(s,'(i0.'//str(n)//')') i
     end function
 
 end module

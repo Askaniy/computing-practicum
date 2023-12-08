@@ -1,10 +1,13 @@
 module my_io
-    use my_consts
     implicit none
 
     private
-    public str, input, output, isspacesymbol, isspace, lower, upper, &
+    public str, zfill, input, output, isspacesymbol, isspace, lower, upper, &
         swap, read_argument, import_grid, import_vector, import_matrix, tlen
+    
+    integer, parameter, public :: mp = 4 ! "my precision", число байт для типа real (для int 4 байта всегда)
+    integer, parameter, public :: dp = 4 ! "decimal places", число знаков после запятой в форматированном выводе 
+    real(mp), parameter, public :: pi = 4*atan(1.0_mp)
 
     integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
@@ -26,7 +29,8 @@ module my_io
     end interface
 
     interface output
-        module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D
+        module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D, &
+            output_complex0D, output_complex1D, output_complex2D, output_bool0D, output_bool1D
     end interface
 
     contains
@@ -497,22 +501,96 @@ module my_io
         end if
     end subroutine
 
+    subroutine output_complex0D(text, a)
+        character(*), intent(in) :: text
+        complex(mp), intent(in) :: a
+        write(*,'("'//text//'", 1x, f0.'//str(dp)//', "+", f0.'//str(dp)//', "i")') a
+    end subroutine
+
+    subroutine output_complex1D(text, a)
+        character(*), intent(in) :: text
+        complex(mp), intent(in) :: a(:)
+        if (size(a) == 1) then
+            call output_complex0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, f0.'//str(dp)//', "+", f0.'//str(dp)//', "i")$)') a
+            write(*,*)
+        end if
+    end subroutine
+
+    subroutine output_complex2D(text, a)
+        character(*), intent(in) :: text
+        complex(mp), intent(in) :: a(:,:)
+        integer :: sz_x, sz_y
+        sz_x = size(a, dim=1)
+        sz_y = size(a, dim=2)
+        if (sz_x == 1) then
+            call output_complex1D(text, reshape(a, [sz_y]))
+        else if (sz_y == 1) then
+            call output_complex1D(text, reshape(a, [sz_x]))
+        else
+            block
+                integer :: l, l_ij, i, j, len_text
+                len_text = tlen(text)
+                l = 0
+                do i = 1,sz_x
+                    do j = 1,sz_y
+                        l_ij = max(len(str(floor(real(a(i,j))))), len(str(floor(aimag(a(i,j))))))
+                        if (l < l_ij) l = l_ij
+                    end do
+                end do
+                l = l + 2 + dp
+                if (len_text == 0) then
+                    write(*,'('//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                    "+", f'//str(l)//'.'//str(dp)//', "i")/,&
+                    &        ('//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                    "+", f'//str(l)//'.'//str(dp)//', "i")))') a
+                else
+                    write(*,'("'//text//'", '//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                                  "+", f'//str(l)//'.'//str(dp)//', "i")/,&
+                    &('//str(len_text)//'x, '//str(sz_x)//'(f'//str(l)//'.'//str(dp)//',&
+                    &                                  "+", f'//str(l)//'.'//str(dp)//', "i")))') a
+                end if
+            end block
+        end if
+    end subroutine
+
+    subroutine output_bool0D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a
+        write(*,'("'//text//'", 1x, l)') a
+    end subroutine
+
+    subroutine output_bool1D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a(:)
+        if (size(a) == 1) then
+            call output_bool0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, l)$)') a
+            write(*,*)
+        end if
+    end subroutine
+
 
     ! Серия функций обработки строк, функционал близок к аналогам на языке Python
     ! Вдохновлено https://github.com/certik/fortran-utils/blob/master/src/utils.f90
 
-    pure logical function isspacesymbol(char) ! возвращает .true. на пробельные символы space (32) и tab (9)
+    ! Возвращает .true. на пробельные символы space (32) и tab (9)
+    pure logical function isspacesymbol(char)
         character, intent(in) :: char
         isspacesymbol = (iachar(char) == 32 .or. iachar(char) == 9)
     end function
-    
-    pure logical function isspace(string) ! возвращает .true., если вся строка из пробельных символов или пуста
+
+    ! Возвращает .true., если вся строка из пробельных символов или пуста
+    pure logical function isspace(string)
         character(*), intent(in) :: string
         integer :: i
         isspace = all([(isspacesymbol(string(i:i)), i=1,len(string))])
     end function
 
-    pure function tlen(string) result(sz) ! возвращает длину строки, считая непечатные байты за половину символа
+    ! Возвращает длину строки, считая непечатные байты за половину символа
+    pure function tlen(string) result(sz)
         character(*), intent(in) :: string
         integer :: i, sz
         sz = len(string) * 2
@@ -522,7 +600,8 @@ module my_io
         sz = sz / 2
     end function
 
-    pure function lower(s) result(t) ! Возвращает строчку строчными латинскими символами
+    ! Возвращает строчку строчными латинскими символами
+    pure function lower(s) result(t)
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
@@ -535,7 +614,8 @@ module my_io
         end do
     end function
 
-    pure function upper(s) result(t) ! Возвращает строчку заглавными латинскими символами
+    ! Возвращает строчку заглавными латинскими символами
+    pure function upper(s) result(t)
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
@@ -546,6 +626,13 @@ module my_io
                 t(i:i) = char(ichar(t(i:i)) + diff)
             end if
         end do
+    end function
+
+    ! Расширяет нулями влево целое число
+    pure function zfill(i, n) result(s)
+        integer, intent(in) :: i, n
+        character(max(n, str_int_len(i))) :: s
+        write(s,'(i0.'//str(n)//')') i
     end function
 
 end module
