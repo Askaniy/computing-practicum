@@ -6,7 +6,7 @@ module my_math
     ! Вспомогательные функции
     private spline_vectors, recursive_FFT, legendre_polynomial_roots, legendre_polynomial_coefficients, &
             solve_polynomial_directly, get_abs_max_root, polynomial_division, isdiagdominant, &
-            square_jacobi_matrix, integrate_rectangle, integrate_simpson, &
+            square_jacobi_matrix, integrate_rectangle, integrate_simpson, integrate_gauss, &
             multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D, meshgrid_int, meshgrid_real
     
     interface multiply
@@ -352,6 +352,40 @@ module my_math
     end function
 
     ! Задание 8: метод численного интегрирования Гаусса
+    function integrate_gauss(f, a, b, n) result(s)
+        real(mp), intent(in) :: a, b
+        integer, intent(in) :: n ! количество узлов = степень полинома
+        real(mp) :: s, c(n), t(n), scale
+        character(10) :: filename
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        filename = 'quad'//zfill(n, 2)//'.dat'
+        ! Читаем ранее вычисленные коэффициенты из файла, если он есть
+        if (isfile(filename)) then
+            open(1, file=filename, status='old')
+                do i=1,n
+                    read(1,*) c(i), t(i)
+                end do
+            close(1)
+        else
+            t = legendre_polynomial_roots(n)
+            c = gaussian_quadrature_coefficients(t)
+            ! Сохраняем коэффициенты и корни
+            open(1, file=filename)
+                do i=1,n
+                    write(1,*) c(i), t(i)
+                end do
+            close(1)
+        end if
+        scale = (b-a) / 2 ! коэффициент масштабирования
+        t = a + (t+1) * scale ! масштабирование от [-1, 1] к [a, b]
+        s = dot_product(c, apply(f, t)) * scale
+    end function
 
     ! Вычисляет коэффициенты квадратурной формулы Гаусса
     function gaussian_quadrature_coefficients(roots) result(a_vector)
@@ -546,9 +580,8 @@ module my_math
 
     function integrate(f, a, b, n, mode0) result(s)
         real(mp), intent(in) :: a, b ! пределы интегрирования
-        integer, intent(in) :: n ! количество промежутков
+        integer, intent(in) :: n ! количество улов
         real(mp) :: s
-        integer :: m ! эффективное количество промежутков
         character(*), optional :: mode0
         character(1) :: mode
         interface
@@ -565,20 +598,17 @@ module my_math
         end if
         select case (mode)
             case ('r') ! rectangle
-                s = integrate_rectangle(f, a, b, n)
+                s = integrate_rectangle(f, a, b, n-1) ! передаём количество промежутков
             case ('s') ! simpson
-                m = n
-                if (mod(n, 2) == 1) then ! нужно чётное количество промежутков
-                    m = n + 1
-                end if
-                s = integrate_simpson(f, a, b, m)
-            !case ('g') ! gauss
+                s = integrate_simpson(f, a, b, ceiling(real(n)/2)) ! нужно чётное количество промежутков
+            case ('g') ! gauss
+                s = integrate_gauss(f, a, b, n) ! передаём количество узлов
         end select
     end function
 
     function integrate_rectangle(f, a, b, n) result(s)
         real(mp), intent(in) :: a, b
-        integer, intent(in) :: n
+        integer, intent(in) :: n ! количество промежутков
         real(mp) :: s, h, f_array(n+1)
         interface
             pure function f(x) result(y)
@@ -596,8 +626,8 @@ module my_math
 
     function integrate_simpson(f, a, b, n) result(s)
         real(mp), intent(in) :: a, b
-        integer, intent(in) :: n
-        real(mp) :: s, s1(n/2), s2(n/2), h, x
+        integer, intent(in) :: n ! половина количества промежутков
+        real(mp) :: s, s1(n), s2(n), h, x
         interface
             pure function f(x) result(y)
                 use my_io, only: mp
@@ -605,8 +635,8 @@ module my_math
                 real(mp) :: y
             end function
         end interface
-        h = (b - a) / n
-        do concurrent (i=1:n/2)
+        h = (b - a) / n / 2
+        do concurrent (i=1:n)
             x = a+(i*2-1)*h
             s1(i) = f(x)
             s2(i) = f(x+h)
@@ -750,6 +780,22 @@ module my_math
         real(mp), intent(in) :: array(:)
         real(mp) :: diffs(size(array)-1)
         diffs = array(2:size(array)) - array(1:size(array)-1)
+    end function
+
+    ! Аналог функции map в Python. Для случаев, когда нельзя использовать elemental
+    pure function apply(f, array0) result(array1)
+        real(mp), intent(in) :: array0(:)
+        real(mp) :: array1(size(array0))
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        do concurrent (i=1:size(array0))
+            array1(i) = f(array0(i))
+        end do
     end function
 
     ! Серия функций meshgrid: создаёт матрицу из попарных перемножений

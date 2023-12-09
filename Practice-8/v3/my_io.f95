@@ -3,7 +3,7 @@ module my_io
 
     private
     public str, zfill, input, output, isspacesymbol, isspace, lower, upper, &
-        swap, read_argument, import_grid, import_vector, import_matrix, tlen
+        swap, read_argument, import_grid, import_vector, import_matrix, isfile, tlen
     
     integer, parameter, public :: mp = 8 ! "my precision", число байт для типа real (для int 4 байта всегда)
     integer, parameter, public :: dp = 4 ! "decimal places", число знаков после запятой в форматированном выводе 
@@ -101,6 +101,12 @@ module my_io
                 read(1,*) (array(i, n), i=1,3) ! последняя - снова на два
             end if
         close(1)
+    end function
+
+    ! Проверка на существование файла
+    logical function isfile(filename)
+        character(*), intent(in) :: filename
+        inquire(file=trim(filename), exist=isfile)
     end function
 
     

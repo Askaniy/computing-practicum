@@ -23,11 +23,11 @@ program quest8v2p6
     real(mp) :: a, b, integral
     integer :: n
 
-    a = 0
-    b = 3
-    n = 10
+    a = 3
+    b = 6
+    n = 9
     
-    integral = integrate(f1, a, b, n, 's')
-    call output('интеграл =', integral)
+    integral = integrate(f1, a, b, n, 'gauss')
+    call output('интеграл =', integral) ! аналитический ответ - 63
     
 end program

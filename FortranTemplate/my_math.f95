@@ -6,7 +6,7 @@ module my_math
     ! Вспомогательные функции
     private spline_vectors, recursive_FFT, legendre_polynomial_roots, legendre_polynomial_coefficients, &
             solve_polynomial_directly, get_abs_max_root, polynomial_division, isdiagdominant, &
-            square_jacobi_matrix, &
+            square_jacobi_matrix, integrate_rectangle, integrate_simpson, integrate_gauss, &
             multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D, meshgrid_int, meshgrid_real
     
     interface multiply
@@ -18,8 +18,8 @@ module my_math
     end interface
 
     integer, private :: i, j, k
-    real(mp), parameter, private :: eps = epsilon(0._mp) ! output accuracy
-    real(mp), parameter, private :: sqrt_eps = sqrt(eps) ! differentiation step
+    real(mp), parameter, private :: eps = epsilon(0._mp) ! Точность вычислений
+    real(mp), parameter, private :: sqrt_eps = sqrt(eps) ! Шаг дифференцирования
 
     contains
 
@@ -50,9 +50,9 @@ module my_math
         character(*), optional :: mode0
         character(1) :: mode
         if (.not. present(mode0)) then
-            mode = 'm' ! (mainch)
+            mode = 'm' ! mainch
         else
-            mode = mode0(1)
+            mode = mode0
         end if
         n = size(b0) ! размер СЛУ
         a(:n,:) = a0
@@ -71,7 +71,7 @@ module my_math
                 a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
             end do
         end do
-        if (mode == 'j') then ! (jordan)
+        if (mode == 'j') then ! jordan
             do concurrent (j=n:1:-1)
                 a(n+1,1:j-1) = a(n+1,1:j-1) - a(j,1:j-1) * a(n+1,j)
             end do
@@ -94,9 +94,9 @@ module my_math
         character(*), optional :: mode0
         character(1) :: mode
         if (.not. present(mode0)) then
-            mode = 'r' ! (relax)
+            mode = 'r' ! relax
         else
-            mode = mode0(1)
+            mode = mode0
         end if
         if (.not. isdiagdominant(a)) stop 'Матрица не имеет диагонального преобладания!'
         n = size(b) ! размер СЛУ
@@ -352,6 +352,40 @@ module my_math
     end function
 
     ! Задание 8: метод численного интегрирования Гаусса
+    function integrate_gauss(f, a, b, n) result(s)
+        real(mp), intent(in) :: a, b
+        integer, intent(in) :: n ! количество узлов = степень полинома
+        real(mp) :: s, c(n), t(n), scale
+        character(10) :: filename
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        filename = 'quad'//zfill(n, 2)//'.dat'
+        ! Читаем ранее вычисленные коэффициенты из файла, если он есть
+        if (isfile(filename)) then
+            open(1, file=filename, status='old')
+                do i=1,n
+                    read(1,*) c(i), t(i)
+                end do
+            close(1)
+        else
+            t = legendre_polynomial_roots(n)
+            c = gaussian_quadrature_coefficients(t)
+            ! Сохраняем коэффициенты и корни
+            open(1, file=filename)
+                do i=1,n
+                    write(1,*) c(i), t(i)
+                end do
+            close(1)
+        end if
+        scale = (b-a) / 2 ! коэффициент масштабирования
+        t = a + (t+1) * scale ! масштабирование от [-1, 1] к [a, b]
+        s = dot_product(c, apply(f, t)) * scale
+    end function
 
     ! Вычисляет коэффициенты квадратурной формулы Гаусса
     function gaussian_quadrature_coefficients(roots) result(a_vector)
@@ -475,17 +509,20 @@ module my_math
         real(mp) :: x1, y(1:size(a)-1), b(1:size(a)-1)
         integer :: n, limit
         if (.not. present(iterations_limit)) then
-            limit = 100000 ! нужно 20000 итераций для mp=8, n=31
+            limit = huge(1)
         else
             limit = iterations_limit
         end if
         n = size(a) - 1 ! степень многочлена
         b = a(1:) / a(0) ! приведённые коэффициенты
-        y = 1 ! call random_number(y) для n начальных значений хуже
+        y = 1 ! n начальных значений
         do i=1,limit
             x1 = - dot_product(y, b) ! x1 тут - буферная переменная
             y(2:n) = y(1:n-1) ! сдвиг: новый элемент в начало
             y(1) = x1
+            do while (abs(y(1)) < 0.03125)
+                y = y * 1024
+            end do
             x1 = y(1)/y(2)
             if (abs(x1 - y(2)/y(3)) < eps) exit
         end do
@@ -537,50 +574,74 @@ module my_math
 
 
     ! Серия функций integrate. Принимает функцию, интервал и число промежутков
-    ! Пример использования: integrate(f, 0, 10, 100, 'rectangle')
+    ! Режим определяется первой буквой из вариантов: rectangle, simpson, gauss
+    ! По умолчанию - формула Симпсона (simpson)
+    ! Пример использования: integrate(f, 0, 3, 10, 'gauss')
 
-    function integrate(f, a, b, n, mode) result(s)
-        integer :: n, m
-        real(mp), external :: f
-        real(mp) :: s, a, b, h
-        character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'simpson'
+    function integrate(f, a, b, n, mode0) result(s)
+        real(mp), intent(in) :: a, b ! пределы интегрирования
+        integer, intent(in) :: n ! количество улов
+        real(mp) :: s
+        character(*), optional :: mode0
+        character(1) :: mode
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        if (.not. present(mode0)) then
+            mode = 's' ! simpson
+        else
+            mode = mode0
         end if
-        h = (b - a) / n
-        if (mode == 'rectangle') then
-            s = 0
-            do i = 1,n
-                s = s + f(a+(i-0.5_mp)*h)
-            end do
-            s = s * h
-        elseif (mode == 'trapeze') then
-            s = (f(a) + f(b)) / 2
-            do i = 2,n
-                s = s + f(a+(i-1)*h)
-            end do
-            s = s * h
-        elseif (mode == 'simpson') then
-            m = n
-            if (mod(n, 2) == 1) then !s = ieee_value(s, ieee_quiet_nan); return
-                m = n + 1
-            end if
-            s = simpson(f, a, b, m)
-        end if
+        select case (mode)
+            case ('r') ! rectangle
+                s = integrate_rectangle(f, a, b, n-1) ! передаём количество промежутков
+            case ('s') ! simpson
+                s = integrate_simpson(f, a, b, ceiling(real(n)/2)) ! нужно чётное количество промежутков
+            case ('g') ! gauss
+                s = integrate_gauss(f, a, b, n) ! передаём количество узлов
+        end select
     end function
 
-    function simpson(f, a, b, n) result(s)
-        integer :: n
-        real(mp) :: s, s1, s2, a, b, h, f, x
+    function integrate_rectangle(f, a, b, n) result(s)
+        real(mp), intent(in) :: a, b
+        integer, intent(in) :: n ! количество промежутков
+        real(mp) :: s, h, f_array(n+1)
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
         h = (b - a) / n
-        s1 = 0
-        s2 = -f(b)
-        do i = 2,n,2
-            x = a+(i-1)*h
-            s1 = s1 + f(x)
-            s2 = s2 + f(x+h)
+        do concurrent (i=1:n)
+            f_array(i) = f(a+(i-0.5_mp)*h)
         end do
-        s = h/3 * (f(a) + f(b) + 4*s1 + 2*s2)
+        s = sum(f_array) * h
+    end function
+
+    function integrate_simpson(f, a, b, n) result(s)
+        real(mp), intent(in) :: a, b
+        integer, intent(in) :: n ! половина количества промежутков
+        real(mp) :: s, s1(n), s2(n), h, x
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        h = (b - a) / n / 2
+        do concurrent (i=1:n)
+            x = a+(i*2-1)*h
+            s1(i) = f(x)
+            s2(i) = f(x+h)
+        end do
+        s = h/3 * (f(a) - f(b) + 4*sum(s1) + 2*sum(s2))
     end function
 
 
@@ -657,6 +718,13 @@ module my_math
         end if
     end function
 
+    ! Возвращает среднее арифметическое
+    pure function mean(a)
+        real(mp), intent(in) :: a(:)
+        real(mp) :: mean
+        mean = sum(a) / size(a)
+    end function
+
     ! Возвращает длину вектора
     pure function length(a)
         real(mp), intent(in) :: a(:)
@@ -712,6 +780,22 @@ module my_math
         real(mp), intent(in) :: array(:)
         real(mp) :: diffs(size(array)-1)
         diffs = array(2:size(array)) - array(1:size(array)-1)
+    end function
+
+    ! Аналог функции map в Python. Для случаев, когда нельзя использовать elemental
+    pure function apply(f, array0) result(array1)
+        real(mp), intent(in) :: array0(:)
+        real(mp) :: array1(size(array0))
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        do concurrent (i=1:size(array0))
+            array1(i) = f(array0(i))
+        end do
     end function
 
     ! Серия функций meshgrid: создаёт матрицу из попарных перемножений
