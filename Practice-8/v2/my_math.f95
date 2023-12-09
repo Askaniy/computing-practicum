@@ -476,17 +476,20 @@ module my_math
         real(mp) :: x1, y(1:size(a)-1), b(1:size(a)-1)
         integer :: n, limit
         if (.not. present(iterations_limit)) then
-            limit = 100000 ! нужно 20000 итераций для mp=8, n=31
+            limit = huge(1)
         else
             limit = iterations_limit
         end if
         n = size(a) - 1 ! степень многочлена
         b = a(1:) / a(0) ! приведённые коэффициенты
-        y = 1 ! call random_number(y) для n начальных значений хуже
+        y = 1 ! n начальных значений
         do i=1,limit
             x1 = - dot_product(y, b) ! x1 тут - буферная переменная
             y(2:n) = y(1:n-1) ! сдвиг: новый элемент в начало
             y(1) = x1
+            do while (abs(y(1)) < 0.03125)
+                y = y * 1024
+            end do
             x1 = y(1)/y(2)
             if (abs(x1 - y(2)/y(3)) < eps) exit
         end do
@@ -656,6 +659,13 @@ module my_math
                 end do
             end block
         end if
+    end function
+
+    ! Возвращает среднее арифметическое
+    pure function mean(a)
+        real(mp), intent(in) :: a(:)
+        real(mp) :: mean
+        mean = sum(a) / size(a)
     end function
 
     ! Возвращает длину вектора
