@@ -5,7 +5,7 @@ module settings
     implicit none
 
     ! Конец интервала интегрирования
-    integer, parameter :: end = 100
+    integer, parameter :: end = 10
 
     ! Вектор начальных условий (отпускаем маятник под 60°)
     real(mp), dimension(2), parameter :: x0 = [pi/3, 0._mp]
@@ -21,9 +21,9 @@ module settings
     contains
 
     ! Уравнение колебаний математического маятника
-    function pendulum(t, x) result(x_dot)
-        real(mp), intent(in) :: t, x(2)
-        real(mp), dimension(2) :: x_dot
+    pure function pendulum(t, x) result(x_dot)
+        real(mp), intent(in) :: t, x(:)
+        real(mp) :: x_dot(size(x))
         x_dot(1) = x(2)
         x_dot(2) = -mu * x(2) - g/l * sin(x(1))
     end function
@@ -37,13 +37,18 @@ program quest9v1
     implicit none
     
     integer :: i, n, d
-    real(mp), dimension(end+1) :: t=[(i*h, i=0,end)]
+    real(mp) :: t(int(end/h)+1)
     real(mp) :: x(size(x0), size(t))
 
     n = size(t)  ! количество шагов
     d = size(x0) ! размерность системы
 
-    x = ode_simple(t, x0)
+    ! Формирование равномерного массива времени
+    do concurrent (i=1:n)
+        t(i) = real(i-1) * h
+    end do
+
+    x = ode_simple(pendulum, t, x0)
     open(1, file='sp.dat')
         do i=1,n
             write(1,'('//str(1+d)//'f9.'//str(dp)//')') t(i), x(:,i)

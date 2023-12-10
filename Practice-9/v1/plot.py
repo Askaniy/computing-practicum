@@ -24,7 +24,7 @@ t2, x2, y2 = np.loadtxt('ae.dat').transpose()
 t3, x3, y3 = np.loadtxt('ai.dat').transpose()
 
 fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(2, 2, figsize=(8, 6), dpi=100)
-ax0.set_title('Интуитивное интегрирование')
+ax0.set_title('Простое решение ДУ')
 ax0.plot(x0, y0, color='#108BB4')
 ax1.set_title('Метод Рунге-Кутты')
 ax1.plot(x1, y1, color='#108BB4')

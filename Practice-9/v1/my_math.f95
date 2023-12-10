@@ -544,11 +544,25 @@ module my_math
 
     ! Задание 9: системы обыкновенных дифференциальных уравнений
 
-    ! Интуитивное решение ДУ для тестирования
-    function ode_simple(t, x0) result(x)
+    ! Простое решение ДУ для тестирования
+    function ode_simple(f, t, x0) result(x)
         real(mp), intent(in) :: t(:), x0(:)
-        real(mp) :: x(size(x0), size(t))
-        call random_number(x)
+        real(mp) :: h(2:size(t)), x(size(x0), size(t))
+        integer :: n, d
+        interface
+            pure function f(t, x) result(x_dot)
+                use my_io, only: mp
+                real(mp), intent(in) :: t, x(:)
+                real(mp) :: x_dot(size(x))
+            end function
+        end interface
+        n = size(t)  ! количество шагов
+        d = size(x0) ! размерность системы
+        h = diffs(t) ! поддержка переменного шага
+        x(:,1) = x0  ! начальные данные
+        do i=2,n
+            x(:,i) = x(:,i-1) + f(t(i), x(:,i-1)) * h(i)
+        end do
     end function
 
     ! Метод Рунге-Кутты 4-го порядка
