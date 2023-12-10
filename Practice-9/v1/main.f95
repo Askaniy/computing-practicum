@@ -4,19 +4,20 @@ module settings
     use my_io, only: mp, pi
     implicit none
 
+    ! Шаг интегрирования
+    real(mp), parameter :: h = 0.1
+
     ! Конец интервала интегрирования
     integer, parameter :: end = 10
 
-    ! Вектор начальных условий (отпускаем маятник под 60°)
-    real(mp), dimension(2), parameter :: x0 = [pi/3, 0._mp]
-
-    ! Шаг интегрирования
-    real(mp), parameter :: h = 0.1
+    ! Порядок методов Адамса
+    integer, parameter :: m = 4
 
     ! Параметры математического маятника
     real(mp), parameter, private :: g=9.8, l=2, mu=0.1
 
-    ! Порядок методов Адамса?
+    ! Вектор начальных условий (отпускаем маятник под 60°)
+    real(mp), dimension(2), parameter :: x0 = [pi/3, 0._mp]
 
     contains
 
@@ -45,7 +46,7 @@ program quest9v1
 
     ! Формирование равномерного массива времени
     do concurrent (i=1:n)
-        t(i) = real(i-1) * h
+        t(i) = (i-1) * h
     end do
 
     x = ode_simple(pendulum, t, x0)
@@ -62,7 +63,10 @@ program quest9v1
         end do
     close(1)
 
-    x = ode_adams_extrap(t, x0)
+    x = ode_adams_extrap(pendulum, t, x0, m)
+    write(*,*) 1
+    write(*,*) d
+    write(*,*) 2
     open(1, file='ae.dat')
         do i=1,n
             write(1,'('//str(1+d)//'f9.'//str(dp)//')') t(i), x(:,i)

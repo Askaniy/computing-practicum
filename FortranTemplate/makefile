@@ -7,7 +7,7 @@ mode =
 files := $(wildcard *.$(ext))
 obj := $(patsubst %.$(ext), %.o, $(files))
 
-debug: opt += -fcheck=all
+debug: opt += -g -fbacktrace -Wall -fcheck=all
 debug: result
 
 optimize: opt += -Ofast
