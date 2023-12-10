@@ -566,10 +566,30 @@ module my_math
     end function
 
     ! Метод Рунге-Кутты 4-го порядка
-    function ode_runge_kutta_4(t, x0) result(x)
+    function ode_runge_kutta_4(f, t, x0) result(x)
         real(mp), intent(in) :: t(:), x0(:)
-        real(mp) :: x(size(x0), size(t))
-        call random_number(x)
+        real(mp) :: h, h2, x(size(x0), size(t)), &
+                    k1(size(x0)), k2(size(x0)), k3(size(x0)), k4(size(x0))
+        integer :: n, d
+        interface
+            pure function f(t, x) result(x_dot)
+                use my_io, only: mp
+                real(mp), intent(in) :: t, x(:)
+                real(mp) :: x_dot(size(x))
+            end function
+        end interface
+        n = size(t)   ! количество шагов
+        d = size(x0)  ! размерность системы
+        h = t(2)-t(1) ! предполагается равномерная сетка
+        h2 = h/2
+        x(:,1) = x0   ! начальные данные
+        do i=2,n
+            k1 = h * f(t(i), x(:,i-1))
+            k2 = h * f(t(i)+h2, x(:,i-1)+k1/2)
+            k3 = h * f(t(i)+h2, x(:,i-1)+k2/2)
+            k4 = h * f(t(i), x(:,i-1)+k3)
+            x(:,i) = x(:,i-1) + (k1 + 2*k2 + 2*k3 + k4) / 6
+        end do
     end function
 
     ! Экстраполяционный метод Адамса

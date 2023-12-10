@@ -55,7 +55,7 @@ program quest9v1
         end do
     close(1)
 
-    x = ode_runge_kutta_4(t, x0)
+    x = ode_runge_kutta_4(pendulum, t, x0)
     open(1, file='rk.dat')
         do i=1,n
             write(1,'('//str(1+d)//'f9.'//str(dp)//')') t(i), x(:,i)
