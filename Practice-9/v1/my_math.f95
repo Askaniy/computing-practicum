@@ -1,15 +1,13 @@
 module my_math
-    use my_consts
     use my_io
     !use, intrinsic :: ieee_arithmetic
     implicit none
 
-    private
-    public dist, isdiagdominant, solve_sle, solve_diagdominant_sle, solve_pentadiagdominant_sle, &
-    polynomial_interp, spline_approx, newton, differentiate, integrate, multiply, find_index, &
-    solve_quadratic_equation, get_abs_max_root, solve_polynomial, legendre_polynomial_roots, &
-    gaussian_quadrature_coefficients, meshgrid, discrete_fourier_transform, fast_fourier_transform, &
-    ode_simple, ode_runge_kutta_4, ode_adams_extrap, ode_adams_interp
+    ! Вспомогательные функции
+    private spline_vectors, recursive_FFT, legendre_polynomial_roots, legendre_polynomial_coefficients, &
+            solve_polynomial_directly, get_abs_max_root, polynomial_division, isdiagdominant, &
+            square_jacobi_matrix, integrate_rectangle, integrate_simpson, integrate_gauss, &
+            multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D, meshgrid_int, meshgrid_real
     
     interface multiply
         module procedure multiply_1D_1D, multiply_1D_2D, multiply_2D_1D, multiply_2D_2D
@@ -19,23 +17,12 @@ module my_math
         module procedure meshgrid_int, meshgrid_real
     end interface
 
-    integer :: i, j, k
-    real(mp), parameter, private :: eps = tiny(0._mp) ! output accuracy
-    real(mp), parameter, private :: sqrt_eps = sqrt(eps) ! differentiation step
+    integer, private :: i, j, k
+    real(mp), parameter, private :: eps = epsilon(0._mp) ! Точность вычислений
+    real(mp), parameter, private :: sqrt_eps = sqrt(eps) ! Шаг дифференцирования
 
     contains
 
-
-    pure function dist(a, b) ! возвращает евклидову метрику
-        real(mp), intent(in) :: a(:), b(:)
-        real(mp) :: dist
-        dist = sqrt(sum(a - b)**2)
-    end function
-
-    pure logical function isdiagdominant(a) ! возвращает .true., если у матрицы имеется диагональное преобладание
-        real(mp), intent(in) :: a(:,:)
-        isdiagdominant = all([( ( 2*abs(a(j,j)) >= sum(abs(a(:,j))) ), j=1,size(a, dim=2) )])
-    end function
 
     ! Задание 2: интерполирование полиномами
     function polynomial_interp(grid, q, a, b) result(interpolated)
@@ -54,34 +41,37 @@ module my_math
     end function
 
     ! Задание 3: решение СЛУ методом Гаусса
-    function solve_sle(a0, b0, mode) result(x)
+    ! Режим определяется первой буквой из вариантов: gauss, jordan, mainch
+    ! По умолчанию - выбор ведущего элемента (mainch)
+    function solve_sle(a0, b0, mode0) result(x)
         real(mp), intent(in) :: a0(:,:), b0(:)
         real(mp) :: a(size(b0)+1,size(b0)), x(size(b0))
         integer :: n, lead
-        character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'mainch'
+        character(*), optional :: mode0
+        character(1) :: mode
+        if (.not. present(mode0)) then
+            mode = 'm' ! mainch
+        else
+            mode = mode0
         end if
         n = size(b0) ! размер СЛУ
         a(:n,:) = a0
         a(n+1,:) = b0
-        !call output('k=0, a =', a)
         do k = 1,n ! переход к треугольной матрице
-            if (mode == 'mainch') then ! выбор ведущего элемента
+            if (mode == 'm') then ! выбор ведущего элемента (mainch)
                 lead =  maxloc(abs(a(k,k:) / maxval(a(:,k:), dim=1)), dim=1) + k-1
                 if (lead /= k) then
                     call swap(a(:,k), a(:,lead))
-                    write(*,*) 'Строка '//str(lead)//' теперь ведущая'
+                    !write(*,*) 'Строка '//str(lead)//' теперь ведущая'
                 end if
             end if
-            if (abs(a(k,k)) < eps) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
+            !if (abs(a(k,k)) < eps) write(*,*) 'Диагональный элемент итерации '//str(k)//' близок к нулю'
             a(k:,k) = a(k:,k) / a(k,k)
             do concurrent (j=k+1:n)
                 a(k:,j) = a(k:,j) - a(k:,k) * a(k,j)
             end do
-            !call output('k='//str(k)//', a =', a)
         end do
-        if (mode == 'jordan') then
+        if (mode == 'j') then ! jordan
             do concurrent (j=n:1:-1)
                 a(n+1,1:j-1) = a(n+1,1:j-1) - a(j,1:j-1) * a(n+1,j)
             end do
@@ -95,64 +85,70 @@ module my_math
     end function
 
     ! Задание 4: решение СЛУ с диагональным преобладанием итерационными методами
-    function solve_diagdominant_sle(a, b, mode) result(x)
+    ! Режим определяется первой буквой из вариантов: jacobi, seidel, relax
+    ! По умолчанию - метод релаксации (relax)
+    function solve_diagdominant_sle(a, b, mode0) result(x)
         real(mp), intent(in) :: a(:,:), b(:)
         real(mp) :: x(size(b))
         integer :: n
-        character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'relax'
+        character(*), optional :: mode0
+        character(1) :: mode
+        if (.not. present(mode0)) then
+            mode = 'r' ! relax
+        else
+            mode = mode0
         end if
         if (.not. isdiagdominant(a)) stop 'Матрица не имеет диагонального преобладания!'
         n = size(b) ! размер СЛУ
-        if (mode == 'jacobi') then ! метод Якоби
-            block
-                real(mp) :: x0(n), g(n), d_z(n,n), d_rev(n,n)
-                x0 = b ! произвольно
-                d_z = 0 ! матрица для хранения D и Z, сначала D (диагональ A)
-                d_rev = 0 ! матрица для хранения D^(-1)
-                do concurrent (j=1:n)
-                    d_z(j,j) = a(j,j)
-                    d_rev(j,j) = 1.0 / a(j,j)
-                end do
-                d_z = multiply(d_rev, d_z-a) ! теперь Z
-                g = multiply(d_rev, b)
-                do
-                    x = matmul(d_z, x0) + g ! почему-то multiply не работает
-                    if (dist(x0, x) < eps) exit
-                    x0 = x
-                end do
-            end block
-        else if (mode == 'seidel') then ! метод Зейделя
-            block
-                real(mp) :: x0(n), p_j(n)
-                x0 = b ! произвольно
-                do
-                    do j=1,n
-                        p_j = -a(:,j) / a(j,j)
-                        x(j) = dot_product(p_j(1:j-1), x(1:j-1)) + dot_product(p_j(j+1:n), x0(j+1:n)) + b(j)/a(j,j)
+        select case (mode)
+            case ('j') ! метод Якоби
+                block
+                    real(mp) :: x0(n), g(n), d_z(n,n), d_rev(n,n)
+                    x0 = b ! произвольно
+                    d_z = 0 ! матрица для хранения D и Z, сначала D (диагональ A)
+                    d_rev = 0 ! матрица для хранения D^(-1)
+                    do concurrent (j=1:n)
+                        d_z(j,j) = a(j,j)
+                        d_rev(j,j) = 1.0 / a(j,j)
                     end do
-                    if (dist(x0, x) < eps) exit
-                    x0 = x
-                end do
-            end block
-        else if (mode == 'relax') then ! метод релаксации
-            block
-                real(mp) :: p(n,n), q(n)
-                integer :: max_index
-                do j=1,n
-                    p(:,j) = -a(:,j) / a(j,j)
-                    q(j) = b(j) / a(j,j) ! вектор невязок
-                end do
-                x = 0 ! обязательно
-                do
-                    max_index = maxloc(abs(q), dim=1)
-                    x(max_index) = x(max_index) + q(max_index)
-                    if (abs(q(max_index)) < eps) exit
-                    q = q + p(max_index,:) * q(max_index)
-                end do
-            end block
-        end if
+                    d_z = multiply(d_rev, d_z-a) ! теперь Z
+                    g = multiply(d_rev, b)
+                    do
+                        x = matmul(d_z, x0) + g ! почему-то multiply не работает
+                        if (dist(x0, x) < eps) exit
+                        x0 = x
+                    end do
+                end block
+            case ('s') ! метод Зейделя
+                block
+                    real(mp) :: x0(n), p_j(n)
+                    x0 = b ! произвольно
+                    do
+                        do j=1,n
+                            p_j = -a(:,j) / a(j,j)
+                            x(j) = dot_product(p_j(1:j-1), x(1:j-1)) + dot_product(p_j(j+1:n), x0(j+1:n)) + b(j)/a(j,j)
+                        end do
+                        if (dist(x0, x) < eps) exit
+                        x0 = x
+                    end do
+                end block
+            case ('r') ! метод релаксации
+                block
+                    real(mp) :: p(n,n), q(n)
+                    integer :: max_index
+                    do j=1,n
+                        p(:,j) = -a(:,j) / a(j,j)
+                        q(j) = b(j) / a(j,j) ! вектор невязок
+                    end do
+                    x = 0 ! обязательно
+                    do
+                        max_index = maxloc(abs(q), dim=1)
+                        x(max_index) = x(max_index) + q(max_index)
+                        if (abs(q(max_index)) < eps) exit
+                        q = q + p(max_index,:) * q(max_index)
+                    end do
+                end block
+        end select
     end function
 
     ! Задание 5: решение СЛУ методом пятиточечной прогонки
@@ -252,46 +248,53 @@ module my_math
     end subroutine
 
     ! Задание 6: многомерный метод Ньютона
-    function newton(f, initial_vector, iterations_limit) result(solution)
+    function newton(f, initial_vector, iterations_limit) result(x1)
         real(mp), intent(in) :: initial_vector(:)
         integer, intent(in), optional :: iterations_limit
-        real(mp), dimension(size(initial_vector)) :: solution
-        integer :: n, limit
+        real(mp), dimension(size(initial_vector)) :: x0, x1
+        real(mp), dimension(size(initial_vector), size(initial_vector)) :: jacobi_matrix
+        integer :: limit
         interface
-            function f(x) result(y)
-                use my_consts, only: mp
-                real(mp), intent(in) :: x(:)
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in), dimension(:) :: x
                 real(mp), dimension(size(x)) :: y
-            end
+            end function
         end interface
         if (.not. present(iterations_limit)) then
             limit = 100
         else
             limit = iterations_limit
         end if
-        write(*,*) limit
-        solution = 0
+        x0 = initial_vector
+        do i = 1,limit
+            !call output('iteration '//str(i)//': x0 =', x0)
+            jacobi_matrix = square_jacobi_matrix(f, x0)
+            x1 = solve_sle(jacobi_matrix, multiply(jacobi_matrix, x0) - f(x0))
+            if (all(abs(x1 - x0) < eps)) exit
+            x0 = x1
+        end do
     end function
 
-    ! Вычисление матрицы Якоби (не протестировано)
-    function differentiate(f, x) result(jacobian)
-        integer :: n
+    ! Вычисление квадратной матрицы Якоби
+    function square_jacobi_matrix(f, x) result(jacobi_matrix)
         real(mp), intent(in) :: x(:)
-        real(mp), dimension(size(x)) :: f1, f2, delta_i
-        real(mp), dimension(size(x), size(x)) :: jacobian
+        real(mp), dimension(size(x)) :: f1, f2, step
+        real(mp), dimension(size(x), size(x)) :: jacobi_matrix
+        integer :: n
         interface
             pure function f(x) result(y)
-                use my_consts, only: mp
-                real(mp), intent(in) :: x(:)
+                use my_io, only: mp
+                real(mp), intent(in), dimension(:) :: x
                 real(mp), dimension(size(x)) :: y
-            end
+            end function
         end interface
         n = size(x)
         do concurrent (i=1:n)
-            delta_i = kronecker_delta(i, n)
-            f1 = f(x - delta_i * sqrt_eps)
-            f2 = f(x + delta_i * sqrt_eps)
-            jacobian(i,:) = (f2-f1) / (2*sqrt_eps)
+            step = kronecker_delta(i, n) * sqrt_eps
+            f1 = f(x - step)
+            f2 = f(x + step)
+            jacobi_matrix(i,:) = (f2-f1) / (2*sqrt_eps)
         end do
     end function
 
@@ -304,6 +307,7 @@ module my_math
     end function
 
     ! Задание 7: Быстрое преобразование Фурье
+    ! Может быть ускорено в два раза, если предрассчитывать коэффициенты w
     function fast_fourier_transform(array, sign) result(array1)
         complex(mp), intent(in) :: array(:)
         integer, intent(in) :: sign
@@ -348,6 +352,40 @@ module my_math
     end function
 
     ! Задание 8: метод численного интегрирования Гаусса
+    function integrate_gauss(f, a, b, n) result(s)
+        real(mp), intent(in) :: a, b
+        integer, intent(in) :: n ! количество узлов = степень полинома
+        real(mp) :: s, c(n), t(n), scale
+        character(10) :: filename
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        filename = 'quad'//zfill(n, 2)//'.dat'
+        ! Читаем ранее вычисленные коэффициенты из файла, если он есть
+        if (isfile(filename)) then
+            open(1, file=filename, status='old')
+                do i=1,n
+                    read(1,*) c(i), t(i)
+                end do
+            close(1)
+        else
+            t = legendre_polynomial_roots(n)
+            c = gaussian_quadrature_coefficients(t)
+            ! Сохраняем коэффициенты и корни
+            open(1, file=filename)
+                do i=1,n
+                    write(1,*) c(i), t(i)
+                end do
+            close(1)
+        end if
+        scale = (b-a) / 2 ! коэффициент масштабирования
+        t = a + (t+1) * scale ! масштабирование от [-1, 1] к [a, b]
+        s = dot_product(c, apply(f, t)) * scale
+    end function
 
     ! Вычисляет коэффициенты квадратурной формулы Гаусса
     function gaussian_quadrature_coefficients(roots) result(a_vector)
@@ -357,8 +395,9 @@ module my_math
         integer :: n
         n = size(roots)
         ! рекуррентно конструируем матрицу коэффициентов СЛУ
-        t_matrix(:,0) = roots
-        do k=1,n-1
+        t_matrix(:,0) = 1
+        t_matrix(:,1) = roots
+        do k=2,n-1
             t_matrix(:,k) = t_matrix(:,k-1) * roots
         end do
         ! конструируем вектор результатов СЛУ
@@ -470,20 +509,24 @@ module my_math
         real(mp) :: x1, y(1:size(a)-1), b(1:size(a)-1)
         integer :: n, limit
         if (.not. present(iterations_limit)) then
-            limit = 100
+            limit = huge(1)
         else
             limit = iterations_limit
         end if
         n = size(a) - 1 ! степень многочлена
         b = a(1:) / a(0) ! приведённые коэффициенты
-        call random_number(y) ! n начальных значений
+        y = 1 ! n начальных значений
         do i=1,limit
             x1 = - dot_product(y, b) ! x1 тут - буферная переменная
             y(2:n) = y(1:n-1) ! сдвиг: новый элемент в начало
             y(1) = x1
-            if (abs(y(1)/y(2) - y(2)/y(3)) < eps) exit
+            do while (abs(y(1)) < 0.03125)
+                y = y * 1024
+            end do
+            x1 = y(1)/y(2)
+            if (abs(x1 - y(2)/y(3)) < eps) exit
         end do
-        x1 = y(1)/y(2)
+        !write(*,*) 'Для поиска корня '//str(x1)//' потребовалось '//str(i-1)//' итераций'
     end function
 
     ! Делит `P(x) = a_0 x^n + ... + a_n` на `x - x0` методом Горнера
@@ -531,72 +574,96 @@ module my_math
 
 
     ! Серия функций integrate. Принимает функцию, интервал и число промежутков
-    ! Пример использования: integrate(f, 0, 10, 100, 'rectangle')
+    ! Режим определяется первой буквой из вариантов: rectangle, simpson, gauss
+    ! По умолчанию - формула Симпсона (simpson)
+    ! Пример использования: integrate(f, 0, 3, 10, 'gauss')
 
-    function integrate(f, a, b, n, mode) result(s)
-        integer :: n, m
-        real(mp), external :: f
-        real(mp) :: s, a, b, h
-        character(*), optional :: mode
-        if (.not. present(mode)) then
-            mode = 'simpson'
+    function integrate(f, a, b, n, mode0) result(s)
+        real(mp), intent(in) :: a, b ! пределы интегрирования
+        integer, intent(in) :: n ! количество улов
+        real(mp) :: s
+        character(*), optional :: mode0
+        character(1) :: mode
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        if (.not. present(mode0)) then
+            mode = 's' ! simpson
+        else
+            mode = mode0
         end if
-        h = (b - a) / n
-        if (mode == 'rectangle') then
-            s = 0
-            do i = 1,n
-                s = s + f(a+(i-0.5_mp)*h)
-            end do
-            s = s * h
-        elseif (mode == 'trapeze') then
-            s = (f(a) + f(b)) / 2
-            do i = 2,n
-                s = s + f(a+(i-1)*h)
-            end do
-            s = s * h
-        elseif (mode == 'simpson') then
-            m = n
-            if (mod(n, 2) == 1) then !s = ieee_value(s, ieee_quiet_nan); return
-                m = n + 1
-            end if
-            s = simpson(f, a, b, m)
-        end if
+        select case (mode)
+            case ('r') ! rectangle
+                s = integrate_rectangle(f, a, b, n-1) ! передаём количество промежутков
+            case ('s') ! simpson
+                s = integrate_simpson(f, a, b, ceiling(real(n)/2)) ! нужно чётное количество промежутков
+            case ('g') ! gauss
+                s = integrate_gauss(f, a, b, n) ! передаём количество узлов
+        end select
     end function
 
-    function simpson(f, a, b, n) result(s)
-        integer :: n
-        real(mp) :: s, s1, s2, a, b, h, f, x
+    function integrate_rectangle(f, a, b, n) result(s)
+        real(mp), intent(in) :: a, b
+        integer, intent(in) :: n ! количество промежутков
+        real(mp) :: s, h, f_array(n+1)
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
         h = (b - a) / n
-        s1 = 0
-        s2 = -f(b)
-        do i = 2,n,2
-            x = a+(i-1)*h
-            s1 = s1 + f(x)
-            s2 = s2 + f(x+h)
+        do concurrent (i=1:n)
+            f_array(i) = f(a+(i-0.5_mp)*h)
         end do
-        s = h/3 * (f(a) + f(b) + 4*s1 + 2*s2)
+        s = sum(f_array) * h
+    end function
+
+    function integrate_simpson(f, a, b, n) result(s)
+        real(mp), intent(in) :: a, b
+        integer, intent(in) :: n ! половина количества промежутков
+        real(mp) :: s, s1(n), s2(n), h, x
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        h = (b - a) / n / 2
+        do concurrent (i=1:n)
+            x = a+(i*2-1)*h
+            s1(i) = f(x)
+            s2(i) = f(x+h)
+        end do
+        s = h/3 * (f(a) - f(b) + 4*sum(s1) + 2*sum(s2))
     end function
 
 
     ! Серия функций multiply. Принимает одномерные и двумерные вещественные массивы
     ! Пример использования: sqrt(sum(multiply(a, x) - b)**2) ! невязка
 
-    function multiply_1D_1D(a, b) result(c)
+    pure function multiply_1D_1D(a, b) result(c)
         real(mp), intent(in) :: a(:), b(:)
         real(mp) :: c
         c = dot_product(a, b)
     end function
 
-    function multiply_1D_2D(a, b) result(c)
+    pure function multiply_1D_2D(a, b) result(c)
         real(mp), intent(in) :: a(:), b(:,:)
         real(mp) :: c(size(a))
         c = matmul(a, transpose(b))
     end function
 
-    function multiply_2D_1D(a, b, mode) result(c)
+    pure function multiply_2D_1D(a, b, mode) result(c)
         real(mp), intent(in) :: a(:,:), b(:)
         real(mp) :: c(size(b))
-        character(*), optional :: mode
+        character(*), intent(in), optional :: mode
         if (.not. present(mode)) then
             c = matmul(transpose(a), b)
         elseif (mode == 'tridiagonal') then
@@ -611,11 +678,11 @@ module my_math
         end if
     end function
 
-    function multiply_2D_2D(a, b, mode) result(c)
+    pure function multiply_2D_2D(a, b, mode) result(c)
         real(mp), intent(in) :: a(:,:), b(:,:)
         real(mp), allocatable :: c(:,:)
-        character(*), optional :: mode
-        integer :: m
+        character(*), intent(in), optional :: mode
+        integer :: m, j
         m = size(a, dim=2)
         if (.not. present(mode)) then
             c = transpose(matmul(b, a))
@@ -651,18 +718,45 @@ module my_math
         end if
     end function
 
+    ! Возвращает среднее арифметическое
+    pure function mean(a)
+        real(mp), intent(in) :: a(:)
+        real(mp) :: mean
+        mean = sum(a) / size(a)
+    end function
+
+    ! Возвращает длину вектора
+    pure function length(a)
+        real(mp), intent(in) :: a(:)
+        real(mp) :: length
+        length = sqrt(sum(a**2))
+    end function
+
+    ! Возвращает евклидову метрику
+    pure function dist(a, b)
+        real(mp), intent(in) :: a(:), b(:)
+        real(mp) :: dist
+        dist = length(b - a)
+    end function
+
+    ! Возвращает .true., если у матрицы имеется диагональное преобладание
+    pure logical function isdiagdominant(a) 
+        real(mp), intent(in) :: a(:,:)
+        isdiagdominant = all([( ( 2*abs(a(j,j)) >= sum(abs(a(:,j))) ), j=1,size(a, dim=2) )])
+    end function
+
     ! Сжимает пятидиагональную матрицу (не используется)
     function compressed(matrix)
         real(mp), intent(in) :: matrix(:,:)
         real(mp) :: compressed(5, size(matrix, dim=2))
-        integer(mp) :: n
+        integer :: n
         n = size(matrix, dim=2)
         compressed = 0
         compressed(1, 3:n) = [( matrix(i,i+2), i=1,n-2 )]
         compressed(2, 2:n) = [( matrix(i,i+1), i=1,n-1 )]
         compressed(3, 1:n) = [( matrix(i,i),   i=1,n   )]
-        compressed(4, 1:n-1) = [( matrix(i,i-1), i=2,n   )]
-        compressed(5, 1:n-2) = [( matrix(i,i-2), i=3,n   )]
+        compressed(4, 1:n-1) = [( matrix(i,i-1), i=2,n )]
+        compressed(5, 1:n-2) = [( matrix(i,i-2), i=3,n )]
     end function
 
     ! Бинарный поиск нижнего индекса по сортированному массиву
@@ -686,6 +780,22 @@ module my_math
         real(mp), intent(in) :: array(:)
         real(mp) :: diffs(size(array)-1)
         diffs = array(2:size(array)) - array(1:size(array)-1)
+    end function
+
+    ! Аналог функции map в Python. Для случаев, когда нельзя использовать elemental
+    pure function apply(f, array0) result(array1)
+        real(mp), intent(in) :: array0(:)
+        real(mp) :: array1(size(array0))
+        interface
+            pure function f(x) result(y)
+                use my_io, only: mp
+                real(mp), intent(in) :: x
+                real(mp) :: y
+            end function
+        end interface
+        do concurrent (i=1:size(array0))
+            array1(i) = f(array0(i))
+        end do
     end function
 
     ! Серия функций meshgrid: создаёт матрицу из попарных перемножений

@@ -1,14 +1,14 @@
 ! Задание 9: Задача Коши для системы обыкновенных дифференциальных уравнений
 
 module settings
-    use my_consts
+    use my_io, only: mp, pi
     implicit none
 
     ! Конец интервала интегрирования
     integer, parameter :: end = 100
 
     ! Вектор начальных условий (отпускаем маятник под 60°)
-    real(mp), dimension(2), parameter :: x0 = [pi/3, 0.]
+    real(mp), dimension(2), parameter :: x0 = [pi/3, 0._mp]
 
     ! Шаг интегрирования
     real(mp), parameter :: h = 0.1
@@ -31,10 +31,9 @@ module settings
 end module
 
 program quest9v1
-    use settings
     use my_io
     use my_math
-    use my_consts
+    use settings
     implicit none
     
     integer :: i, n, d

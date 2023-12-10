@@ -1,15 +1,11 @@
-import warnings
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-# Скопированные настройки из другого проекта, TCT
+# Определение папки с запущенным скриптом
+path = Path(__file__).parent.resolve()
 
-# Filling empty space on a plot
-warnings.simplefilter('ignore', UserWarning)
-plt.rcParams['figure.autolayout'] = True
-
-# MatPlotLib custom theme
-# https://matplotlib.org/stable/tutorials/introductory/customizing.html
+# Настройки форматирования
 text_color = '#FFFFFF'
 muted_color = '#A3A3A3'
 highlight_color = '#5A5A5A'
@@ -36,5 +32,7 @@ ax2.set_title('Экстраполяционный метод Адамса')
 ax2.plot(x2, y2, color='#108BB4')
 ax3.set_title('Интерполяционный метод Адамса')
 ax3.plot(x3, y3, color='#108BB4')
-fig.savefig('plot.png', dpi=100)
+
+fig.tight_layout()
+fig.savefig(path/'plot.png', dpi=120)
 #plt.show()

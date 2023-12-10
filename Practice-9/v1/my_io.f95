@@ -1,10 +1,13 @@
 module my_io
-    use my_consts
     implicit none
 
     private
-    public str, input, output, isspacesymbol, isspace, lower, upper, &
-        swap, read_argument, import_grid, import_vector, import_matrix, tlen
+    public str, zfill, input, output, isspacesymbol, isspace, lower, upper, &
+        swap, read_argument, import_grid, import_vector, import_matrix, isfile, tlen
+    
+    integer, parameter, public :: mp = 8 ! "my precision", число байт для типа real (для int 4 байта всегда)
+    integer, parameter, public :: dp = 4 ! "decimal places", число знаков после запятой в форматированном выводе 
+    real(mp), parameter, public :: pi = 4*atan(1.0_mp)
 
     integer, parameter :: str_max = 100 ! максимальная длина строки, конвертируемой в int или real
     integer, parameter :: y_max = 100 ! максимальное количество строк в импортируемой 2D матрице
@@ -27,7 +30,7 @@ module my_io
 
     interface output
         module procedure output_int0D, output_int1D, output_int2D, output_real0D, output_real1D, output_real2D, &
-            output_complex0D, output_complex1D, output_complex2D
+            output_complex0D, output_complex1D, output_complex2D, output_bool0D, output_bool1D
     end interface
 
     contains
@@ -98,6 +101,12 @@ module my_io
                 read(1,*) (array(i, n), i=1,3) ! последняя - снова на два
             end if
         close(1)
+    end function
+
+    ! Проверка на существование файла
+    logical function isfile(filename)
+        character(*), intent(in) :: filename
+        inquire(file=trim(filename), exist=isfile)
     end function
 
     
@@ -552,22 +561,42 @@ module my_io
         end if
     end subroutine
 
+    subroutine output_bool0D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a
+        write(*,'("'//text//'", 1x, l)') a
+    end subroutine
+
+    subroutine output_bool1D(text, a)
+        character(*), intent(in) :: text
+        logical, intent(in) :: a(:)
+        if (size(a) == 1) then
+            call output_bool0D(text, a(1))
+        else
+            write(*,'("'//text//'", (1x, l)$)') a
+            write(*,*)
+        end if
+    end subroutine
+
 
     ! Серия функций обработки строк, функционал близок к аналогам на языке Python
     ! Вдохновлено https://github.com/certik/fortran-utils/blob/master/src/utils.f90
 
-    pure logical function isspacesymbol(char) ! возвращает .true. на пробельные символы space (32) и tab (9)
+    ! Возвращает .true. на пробельные символы space (32) и tab (9)
+    pure logical function isspacesymbol(char)
         character, intent(in) :: char
         isspacesymbol = (iachar(char) == 32 .or. iachar(char) == 9)
     end function
-    
-    pure logical function isspace(string) ! возвращает .true., если вся строка из пробельных символов или пуста
+
+    ! Возвращает .true., если вся строка из пробельных символов или пуста
+    pure logical function isspace(string)
         character(*), intent(in) :: string
         integer :: i
         isspace = all([(isspacesymbol(string(i:i)), i=1,len(string))])
     end function
 
-    pure function tlen(string) result(sz) ! возвращает длину строки, считая непечатные байты за половину символа
+    ! Возвращает длину строки, считая непечатные байты за половину символа
+    pure function tlen(string) result(sz)
         character(*), intent(in) :: string
         integer :: i, sz
         sz = len(string) * 2
@@ -577,7 +606,8 @@ module my_io
         sz = sz / 2
     end function
 
-    pure function lower(s) result(t) ! Возвращает строчку строчными латинскими символами
+    ! Возвращает строчку строчными латинскими символами
+    pure function lower(s) result(t)
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
@@ -590,7 +620,8 @@ module my_io
         end do
     end function
 
-    pure function upper(s) result(t) ! Возвращает строчку заглавными латинскими символами
+    ! Возвращает строчку заглавными латинскими символами
+    pure function upper(s) result(t)
         character(*), intent(in) :: s
         character(len(s)) :: t
         integer :: i, diff
@@ -601,6 +632,13 @@ module my_io
                 t(i:i) = char(ichar(t(i:i)) + diff)
             end if
         end do
+    end function
+
+    ! Расширяет нулями влево целое число
+    pure function zfill(i, n) result(s)
+        integer, intent(in) :: i, n
+        character(max(n, str_int_len(i))) :: s
+        write(s,'(i0.'//str(n)//')') i
     end function
 
 end module
