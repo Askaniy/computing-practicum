@@ -1,7 +1,8 @@
 ! Задание 9: Задача Коши для системы обыкновенных дифференциальных уравнений
 
 module settings
-    use my_io, only: mp, pi
+    use io_precision, only: mp
+    use math_general, only: pi
     implicit none
 
     ! Шаг интегрирования
@@ -32,8 +33,9 @@ module settings
 end module
 
 program quest9v1
-    use my_io
-    use my_math
+    use io_precision
+    use io_general, only: str
+    use math_ode
     use settings
     implicit none
     
