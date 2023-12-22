@@ -596,7 +596,7 @@ module my_math
     function ode_adams_extrap(f, t, x0, m) result(x)
         real(mp), intent(in) :: t(:), x0(:)
         integer, intent(in) :: m ! порядок метода
-        real(mp) :: h, x(size(x0), size(t)), a(m)
+        real(mp) :: h, x(size(x0), size(t)), y(size(x0), size(t)), a(m)
         integer :: n, d
         interface
             pure function f(t, x) result(x_dot)
@@ -609,13 +609,14 @@ module my_math
         d = size(x0)  ! размерность системы
         h = t(2)-t(1) ! предполагается равномерная сетка
         a = adams_extrap_coefficients(m)
-        x = 0
         x(:,:m) = ode_runge_kutta_4(f, t(:m), x0) ! начальные данные
-        call output('', a)
-        do i=m+1,n
-            x(:,i) = x(:,i-1) + h * dot_product(a, [(f(t(i-j), x(:,i-j)), j=1,m)])
+        do concurrent (i=1:m-1) ! заполнение массива значений функции
+            y(:,i) = f(t(i), x(:,i))
         end do
-        write(*,*) x
+        do i=m+1,n
+            y(:,i-1) = f(t(i-1), x(:,i-1))
+            x(:,i) = x(:,i-1) + h * matmul(y(:,i-1:i-m:-1), a)
+        end do
     end function
 
     function adams_extrap_coefficients(n) result(a)
@@ -636,8 +637,7 @@ module my_math
         end do
     end function
 
-    ! Генерирует функцию и интегрирует её
-    ! Возможно аналитическое решение, но отменено по причине лапок.
+    ! Генерирует функцию и интегрирует её. Возможно аналитическое решение
     subroutine adams_extrap_integral(integral, n, m)
         integer, intent(in) :: n, m
         real(mp), intent(out) :: integral

@@ -64,9 +64,6 @@ program quest9v1
     close(1)
 
     x = ode_adams_extrap(pendulum, t, x0, m)
-    write(*,*) 1
-    write(*,*) str(1+d)
-    write(*,*) 2
     open(1, file='ae.dat')
         do i=1,n
             write(1,'('//str(1+d)//'f9.'//str(dp)//')') t(i), x(:,i)
