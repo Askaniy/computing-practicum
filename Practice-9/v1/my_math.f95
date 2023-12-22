@@ -608,7 +608,7 @@ module my_math
         n = size(t)   ! количество шагов
         d = size(x0)  ! размерность системы
         h = t(2)-t(1) ! предполагается равномерная сетка
-        a = adams_extrap_coefficients(m)
+        a = adams_coefficients(m, mode=0)
         x(:,:m) = ode_runge_kutta_4(f, t(:m), x0) ! начальные данные
         do concurrent (i=1:m-1) ! заполнение массива значений функции
             y(:,i) = f(t(i), x(:,i))
@@ -619,8 +619,49 @@ module my_math
         end do
     end function
 
-    function adams_extrap_coefficients(n) result(a)
-        integer, intent(in) :: n
+    ! Интерполяционный метод Адамса
+    function ode_adams_interp(f, t, x0, m) result(x)
+        real(mp), intent(in) :: t(:), x0(:)
+        integer, intent(in) :: m ! порядок метода
+        real(mp) :: h, x(size(x0), size(t)), y(size(x0), size(t)), b(m)
+        integer :: n, d
+        interface
+            pure function f(t, x) result(x_dot)
+                use my_io, only: mp
+                real(mp), intent(in) :: t, x(:)
+                real(mp) :: x_dot(size(x))
+            end function
+        end interface
+        n = size(t)   ! количество шагов
+        d = size(x0)  ! размерность системы
+        h = t(2)-t(1) ! предполагается равномерная сетка
+        b = adams_coefficients(m, mode=1)
+        x(:,:m) = ode_runge_kutta_4(f, t(:m), x0) ! начальные данные
+        do concurrent (i=1:m-1) ! заполнение массива значений функции
+            y(:,i) = f(t(i), x(:,i))
+        end do
+        do j=m,n ! переменная i конфликтует с i из функции newton
+            x(:,j) = newton(se, x(:,j-1))
+            y(:,j) = f(t(j), x(:,j))
+        end do
+
+        contains
+
+        pure function se(vector) result(res)
+            use my_io, only: mp
+            real(mp), intent(in) :: vector(:)
+            real(mp) :: y_temp(d,m), res(d)
+            y_temp = y(:,j:j-m+1:-1)
+            y_temp(:,1) = f(t(i), vector)
+            res = vector - x(:,j-1) - h * matmul(y_temp, b)
+        end function
+    end function
+
+    ! Вычисление коэффициентов методов Адамса
+    ! Экстраполяционный метод: mode = 0
+    ! Интерполяционный метод:  mode = 1
+    function adams_coefficients(n, mode) result(a)
+        integer, intent(in) :: n, mode
         real(mp) :: a(0:n-1), integral
         do concurrent (j=0:n/2)
             a(j) = factorial(j) * factorial(n-1-j)
@@ -632,14 +673,13 @@ module my_math
         end if
         a(1:n-1:2) = -a(1:n-1:2)
         do j=0,n-1
-            call adams_extrap_integral(integral, n, j)
+            call adams_integral(integral, n, j-mode, mode)
             a(j) = integral / a(j)
         end do
     end function
 
-    ! Генерирует функцию и интегрирует её. Возможно аналитическое решение
-    subroutine adams_extrap_integral(integral, n, m)
-        integer, intent(in) :: n, m
+    subroutine adams_integral(integral, n, m, mode)
+        integer, intent(in) :: n, m, mode
         real(mp), intent(out) :: integral
         integral = integrate(f, 0._mp, 1._mp, 10, 'gauss')
         contains
@@ -647,17 +687,9 @@ module my_math
             use my_io, only: mp
             real(mp), intent(in) :: z
             real(mp) :: res
-            !res = product([(z+k, k=0,n-1)], k/=m)
-            res = product([(z+k, k=0,n-1)]) / (z+m)
+            res = product([(z+k, k=-mode,n-1-mode)]) / (z+m)
         end function
     end subroutine
-
-    ! Интерполяционный метод Адамса
-    function ode_adams_interp(t, x0) result(x)
-        real(mp), intent(in) :: t(:), x0(:)
-        real(mp) :: x(size(x0), size(t))
-        call random_number(x)
-    end function
 
 
     ! Серия функций integrate. Принимает функцию, интервал и число промежутков

@@ -70,7 +70,7 @@ program quest9v1
         end do
     close(1)
 
-    x = ode_adams_interp(t, x0)
+    x = ode_adams_interp(pendulum, t, x0, m)
     open(1, file='ai.dat')
         do i=1,n
             write(1,'('//str(1+d)//'f9.'//str(dp)//')') t(i), x(:,i)
